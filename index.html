@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Russell Greene — Executive Producer</title>
+  <meta name="description" content="Executive Producer at BUCK. Orchestrating complex productions for global brands." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #0e0e0e;
+      --paper: #f5f3ef;
+      --mid: #999;
+      --rule: #d8d5cf;
+      --accent: #0e0e0e;
+      --serif: 'Cormorant Garamond', Georgia, serif;
+      --mono: 'DM Mono', 'Courier New', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--serif);
+      font-weight: 300;
+      font-size: 18px;
+      line-height: 1.6;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Layout ── */
+    .site-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    /* ── Nav ── */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 40px 0 38px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mid);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--ink); }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 88px 0 80px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .hero-meta {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 28px;
+    }
+
+    .hero-meta span {
+      display: inline-block;
+      margin-right: 24px;
+    }
+
+    .hero h1 {
+      font-family: var(--serif);
+      font-size: clamp(52px, 8vw, 88px);
+      font-weight: 300;
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      margin-bottom: 36px;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      font-weight: 300;
+    }
+
+    .hero-bio {
+      max-width: 520px;
+      font-size: 19px;
+      line-height: 1.65;
+      color: #444;
+      margin-bottom: 40px;
+    }
+
+    .hero-cta {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink);
+      text-decoration: none;
+      border-bottom: 1px solid var(--ink);
+      padding-bottom: 2px;
+      transition: opacity 0.2s;
+    }
+
+    .hero-cta:hover { opacity: 0.5; }
+
+    /* ── Expertise ── */
+    .expertise {
+      padding: 64px 0;
+      border-bottom: 1px solid var(--rule);
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 0 60px;
+      align-items: start;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--mid);
+      padding-top: 4px;
+    }
+
+    .expertise-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    .expertise-list li {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--rule);
+      font-size: 17px;
+      color: var(--ink);
+    }
+
+    .expertise-list li:nth-child(odd) { padding-right: 40px; }
+    .expertise-list li span {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--mid);
+      margin-right: 12px;
+    }
+
+    /* ── Work ── */
+    #work {
+      padding: 64px 0;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .work-header {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 0 60px;
+      margin-bottom: 0;
+    }
+
+    .work-list {
+      list-style: none;
+    }
+
+    .work-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: baseline;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--rule);
+      cursor: default;
+      transition: background 0.15s;
+      margin: 0 -32px;
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+
+    .work-item:first-child { border-top: 1px solid var(--rule); }
+
+    .work-item:hover { background: rgba(14,14,14,0.03); }
+
+    .work-title {
+      font-family: var(--serif);
+      font-size: 20px;
+      font-weight: 300;
+      color: var(--ink);
+    }
+
+    .work-client {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mid);
+      display: block;
+      margin-top: 2px;
+    }
+
+    .work-link {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mid);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      padding-bottom: 1px;
+      transition: color 0.2s, border-color 0.2s;
+      white-space: nowrap;
+    }
+
+    .work-item:hover .work-link {
+      color: var(--ink);
+      border-bottom-color: var(--ink);
+    }
+
+    /* ── Partners ── */
+    .partners {
+      padding: 64px 0;
+      border-bottom: 1px solid var(--rule);
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 0 60px;
+      align-items: start;
+    }
+
+    .partner-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+    }
+
+    .partner-name {
+      font-family: var(--serif);
+      font-size: 28px;
+      font-weight: 300;
+      color: var(--ink);
+      opacity: 0.22;
+      padding: 6px 20px 6px 0;
+      transition: opacity 0.2s;
+      cursor: default;
+    }
+
+    .partner-name:hover { opacity: 1; }
+
+    /* ── Contact ── */
+    #contact {
+      padding: 80px 0 96px;
+    }
+
+    .contact-inner {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 0 60px;
+      align-items: start;
+    }
+
+    .contact-content h2 {
+      font-family: var(--serif);
+      font-size: clamp(36px, 5vw, 54px);
+      font-weight: 300;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      letter-spacing: -0.01em;
+    }
+
+    .contact-content h2 em { font-style: italic; }
+
+    .contact-content p {
+      font-size: 17px;
+      color: #555;
+      line-height: 1.65;
+      margin-bottom: 36px;
+      max-width: 420px;
+    }
+
+    .contact-details {
+      list-style: none;
+      margin-bottom: 40px;
+    }
+
+    .contact-details li {
+      display: flex;
+      gap: 20px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--rule);
+      align-items: baseline;
+    }
+
+    .contact-details .detail-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mid);
+      width: 100px;
+      flex-shrink: 0;
+    }
+
+    .contact-details .detail-value {
+      font-size: 16px;
+      color: var(--ink);
+    }
+
+    .contact-details a {
+      color: var(--ink);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.2s;
+    }
+
+    .contact-details a:hover { border-bottom-color: var(--ink); }
+
+    /* ── Contact Form ── */
+    .contact-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .form-row {
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .form-row:first-child { border-top: 1px solid var(--rule); }
+
+    .form-row label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--mid);
+      padding: 14px 0 0;
+    }
+
+    .form-row input,
+    .form-row textarea {
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--serif);
+      font-size: 17px;
+      font-weight: 300;
+      color: var(--ink);
+      padding: 6px 0 14px;
+      resize: none;
+      width: 100%;
+    }
+
+    .form-row input::placeholder,
+    .form-row textarea::placeholder {
+      color: #bbb;
+    }
+
+    .form-submit {
+      margin-top: 28px;
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .btn-submit {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--paper);
+      background: var(--ink);
+      border: none;
+      padding: 14px 32px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .btn-submit:hover { opacity: 0.7; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--rule);
+      padding: 28px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    footer .footer-left {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mid);
+    }
+
+    footer .footer-right {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mid);
+    }
+
+    footer a {
+      color: var(--mid);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    footer a:hover { color: var(--ink); }
+
+    /* ── Hero layout with photo ── */
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 0 60px;
+      align-items: end;
+    }
+
+    .hero-photo {
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      object-fit: cover;
+      object-position: center top;
+      display: block;
+      filter: grayscale(100%);
+      transition: filter 0.4s ease;
+    }
+
+    .hero-photo:hover { filter: grayscale(0%); }
+
+    /* ── Fade in on load ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-meta  { animation: fadeUp 0.6s ease both; animation-delay: 0.05s; }
+    .hero h1    { animation: fadeUp 0.7s ease both; animation-delay: 0.15s; }
+    .hero-bio   { animation: fadeUp 0.7s ease both; animation-delay: 0.25s; }
+    .hero-cta   { animation: fadeUp 0.7s ease both; animation-delay: 0.35s; }
+
+    /* ── Mobile ── */
+    @media (max-width: 660px) {
+      .site-wrapper { padding: 0 20px; }
+
+      nav { padding: 24px 0 22px; }
+      .nav-links { gap: 20px; }
+
+      .hero { padding: 56px 0 52px; }
+
+      .hero-inner {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-photo {
+        width: 160px;
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        margin-top: 32px;
+        object-position: center 10%;
+      }
+
+      .expertise,
+      .partners,
+      .work-header,
+      .contact-inner {
+        grid-template-columns: 1fr;
+        gap: 16px 0;
+      }
+
+      .expertise-list {
+        grid-template-columns: 1fr;
+      }
+
+      .work-item {
+        margin: 0 -20px;
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+
+      footer { flex-direction: column; gap: 8px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="site-wrapper">
+
+  <!-- Nav -->
+  <nav>
+    <a href="/" class="nav-logo">Russell Greene</a>
+    <ul class="nav-links">
+      <li><a href="#work">Work</a></li>
+      <li><a href="#contact">Contact</a></li>
+      <li><a href="https://www.linkedin.com/in/russellgreene/" target="_blank" rel="noopener">LinkedIn ↗</a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-text">
+        <p class="hero-meta">
+          <span>NYC</span>
+          <span>Executive Producer @ BUCK</span>
+          <span>20+ Years</span>
+        </p>
+        <h1>Russell<br /><em>Greene</em></h1>
+        <p class="hero-bio">Orchestrating the friction between visionary storytelling and technological scale. I architect complex productions that define the frontier for global brands.</p>
+        <a href="#contact" class="hero-cta">Get in touch →</a>
+      </div>
+      <img src="Russell_Greene_Headshot.png" alt="Russell Greene" class="hero-photo" />
+    </div>
+  </section>
+
+  <!-- Expertise -->
+  <section class="expertise">
+    <p class="section-label">Core<br />Expertise</p>
+    <ul class="expertise-list">
+      <li><span>01</span>Cross-functional Leadership</li>
+      <li><span>02</span>Technical Integration Strategy</li>
+      <li><span>03</span>Global Production Ops</li>
+      <li><span>04</span>Creative Agency Architecture</li>
+    </ul>
+  </section>
+
+  <!-- Work -->
+  <section id="work">
+    <div class="work-header">
+      <p class="section-label">Selected<br />Work</p>
+      <ul class="work-list">
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Eventbrite Rebrand</span>
+            <span class="work-client">Eventbrite</span>
+          </div>
+          <a href="https://buck.co/work/eventbrite" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Payments Rebrand</span>
+            <span class="work-client">J.P. Morgan</span>
+          </div>
+          <a href="https://buck.co/work/jpmorgan-payments" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Copilot+ PC Product Launch</span>
+            <span class="work-client">Microsoft</span>
+          </div>
+          <a href="https://buck.co/work/microsoft-copilot-pcs" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Brand Visual System</span>
+            <span class="work-client">Cash App</span>
+          </div>
+          <a href="https://buck.co/work/cash-app-visual-identity" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Mesh VR Platform</span>
+            <span class="work-client">Microsoft</span>
+          </div>
+          <a href="https://buck.co/work/microsoft-mesh" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Website Design</span>
+            <span class="work-client">Kurzgesagt</span>
+          </div>
+          <a href="https://buck.co/work/kurzgesagt" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Crave Brand Assets</span>
+            <span class="work-client">Pepsi</span>
+          </div>
+          <a href="https://buck.co/work/pepsi-crave" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Azure AI Campaign</span>
+            <span class="work-client">Microsoft</span>
+          </div>
+          <a href="https://buck.co/work/microsoft-azure" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Product Illustrations</span>
+            <span class="work-client">Cash App</span>
+          </div>
+          <a href="https://buck.co/work/cash-app-illustration-system" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Surface Pro 9 Campaign</span>
+            <span class="work-client">Microsoft</span>
+          </div>
+          <a href="https://buck.co/work/microsoft-surface" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Pixel 4a Campaign</span>
+            <span class="work-client">Google</span>
+          </div>
+          <a href="https://buck.co/work/google-pixel-4a" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Premium Campaign</span>
+            <span class="work-client">Spotify</span>
+          </div>
+          <a href="https://buck.co/work/spotify-premium" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Snow White Campaign</span>
+            <span class="work-client">Squarespace</span>
+          </div>
+          <a href="https://buck.co/work/sqsp-snow-white" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Dracula Campaign</span>
+            <span class="work-client">Squarespace</span>
+          </div>
+          <a href="https://buck.co/work/sqsp-dracula" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">777 Music Video</span>
+            <span class="work-client">Joji</span>
+          </div>
+          <a href="https://pompandclout.com/project/joji-777/" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Taxes Campaign</span>
+            <span class="work-client">Cash App</span>
+          </div>
+          <a href="https://buck.co/work/cash-app-taxes" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Singles Music Video</span>
+            <span class="work-client">Spotify</span>
+          </div>
+          <a href="https://buck.co/work/spotify-aapi-heritage-month" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+        <li class="work-item">
+          <div>
+            <span class="work-title">Restaurants Anthem Film</span>
+            <span class="work-client">Square</span>
+          </div>
+          <a href="https://buck.co/work/square-restaurant-anthem" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
+      </ul>
+    </div>
+  </section>
+
+  <!-- Partners -->
+  <section class="partners">
+    <p class="section-label">Selected<br />Partners</p>
+    <div class="partner-grid">
+      <span class="partner-name">Eventbrite</span>
+      <span class="partner-name">Google</span>
+      <span class="partner-name">Spotify</span>
+      <span class="partner-name">Cash App</span>
+      <span class="partner-name">Microsoft</span>
+      <span class="partner-name">J.P. Morgan</span>
+      <span class="partner-name">Squarespace</span>
+      <span class="partner-name">Pepsi</span>
+      <span class="partner-name">Kurzgesagt</span>
+      <span class="partner-name">Square</span>
+      <span class="partner-name">Joji</span>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section id="contact">
+    <div class="contact-inner">
+      <p class="section-label">Get in<br />Touch</p>
+      <div class="contact-content">
+        <h2>Let's make<br /><em>something</em><br />together.</h2>
+        <p>For inquiries regarding executive production, strategic partnerships, or technical consultation.</p>
+        <ul class="contact-details">
+          <li>
+            <span class="detail-label">Location</span>
+            <span class="detail-value">New York City // NJ</span>
+          </li>
+          <li>
+            <span class="detail-label">Affiliation</span>
+            <span class="detail-value">Executive Producer, BUCK</span>
+          </li>
+          <li>
+            <span class="detail-label">Network</span>
+            <span class="detail-value"><a href="https://www.linkedin.com/in/russellgreene/" target="_blank" rel="noopener">LinkedIn ↗</a></span>
+          </li>
+        </ul>
+
+        <!-- Contact Form — update action with your preferred form service or server-side handler -->
+        <form class="contact-form" action="mailto:your@email.com" method="POST" enctype="text/plain">
+          <div class="form-row">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" placeholder="Your name" required />
+          </div>
+          <div class="form-row">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="your@email.com" required />
+          </div>
+          <div class="form-row">
+            <label for="message">Message</label>
+            <textarea id="message" name="message" rows="4" placeholder="Tell me about your project…" required></textarea>
+          </div>
+          <div class="form-submit">
+            <button type="submit" class="btn-submit">Send message →</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <span class="footer-left">© 2025 Russell Greene</span>
+    <span class="footer-right"><a href="https://buck.co" target="_blank" rel="noopener">BUCK ↗</a></span>
+  </footer>
+
+</div>
+
+</body>
+</html>
