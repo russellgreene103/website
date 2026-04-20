@@ -517,7 +517,6 @@
 
   <!-- Nav -->
   <nav>
-    <a href="/" class="nav-logo">Russell Greene</a>
     <ul class="nav-links">
       <li><a href="#work">Work</a></li>
       <li><a href="#contact">Contact</a></li>
@@ -747,8 +746,7 @@
           </li>
         </ul>
 
-        <!-- Contact Form — update action with your preferred form service or server-side handler -->
-        <form class="contact-form" action="mailto:your@email.com" method="POST" enctype="text/plain">
+        <form class="contact-form" id="contact-form" action="https://formspree.io/f/xzdyaezl" method="POST">
           <div class="form-row">
             <label for="name">Name</label>
             <input type="text" id="name" name="name" placeholder="Your name" required />
@@ -765,13 +763,43 @@
             <button type="submit" class="btn-submit">Send message →</button>
           </div>
         </form>
+        <div id="form-success" style="display:none; border-top:1px solid var(--rule); padding:28px 0; font-family:var(--mono); font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink);">
+          Message sent — I'll be in touch soon.
+        </div>
+
+        <script>
+          const form = document.getElementById('contact-form');
+          form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = form.querySelector('.btn-submit');
+            btn.textContent = 'Sending…';
+            btn.disabled = true;
+            try {
+              const res = await fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: { 'Accept': 'application/json' }
+              });
+              if (res.ok) {
+                form.style.display = 'none';
+                document.getElementById('form-success').style.display = 'block';
+              } else {
+                btn.textContent = 'Error — try again';
+                btn.disabled = false;
+              }
+            } catch {
+              btn.textContent = 'Error — try again';
+              btn.disabled = false;
+            }
+          });
+        </script>
       </div>
     </div>
   </section>
 
   <!-- Footer -->
   <footer>
-    <span class="footer-left">© 2025 Russell Greene</span>
+    <span class="footer-left">© 2026 Russell Greene</span>
     <span class="footer-right"><a href="https://buck.co" target="_blank" rel="noopener">BUCK ↗</a></span>
   </footer>
 
