@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Russell Greene — /vibe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #0e0e0e;
+      --paper: #f5f3ef;
+      --mid: #999;
+      --rule: #d8d5cf;
+      --serif: 'Cormorant Garamond', Georgia, serif;
+      --mono: 'DM Mono', 'Courier New', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--serif);
+      font-weight: 300;
+      font-size: 18px;
+      line-height: 1.6;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .site-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    /* ── Nav ── */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 40px 0 38px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    .nav-back {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mid);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .nav-back:hover { color: var(--ink); }
+
+    /* ── Gate (password screen) ── */
+    #gate {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: calc(100vh - 120px);
+      padding: 80px 0;
+    }
+
+    .gate-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 28px;
+    }
+
+    .gate-title {
+      font-family: var(--serif);
+      font-size: clamp(42px, 6vw, 72px);
+      font-weight: 300;
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      margin-bottom: 48px;
+    }
+
+    .gate-title em { font-style: italic; }
+
+    .gate-form {
+      display: flex;
+      flex-direction: column;
+      max-width: 320px;
+      border-top: 1px solid var(--rule);
+    }
+
+    .gate-input-row {
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .gate-input-row label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--mid);
+      padding: 14px 0 0;
+    }
+
+    .gate-input-row input {
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--serif);
+      font-size: 17px;
+      font-weight: 300;
+      color: var(--ink);
+      padding: 6px 0 14px;
+      letter-spacing: 0.15em;
+    }
+
+    .gate-input-row input::placeholder { color: #ccc; }
+
+    .gate-error {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #c0392b;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .gate-error.visible { display: block; }
+
+    .gate-submit {
+      margin-top: 28px;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--paper);
+      background: var(--ink);
+      border: none;
+      padding: 14px 32px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      align-self: flex-start;
+    }
+
+    .gate-submit:hover { opacity: 0.7; }
+
+    /* ── Content (hidden until unlocked) ── */
+    #content {
+      display: none;
+      padding: 80px 0 96px;
+    }
+
+    #content.visible { display: block; }
+
+    .content-header {
+      padding-bottom: 64px;
+      border-bottom: 1px solid var(--rule);
+      margin-bottom: 0;
+    }
+
+    .content-meta {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 20px;
+    }
+
+    .content-title {
+      font-family: var(--serif);
+      font-size: clamp(42px, 6vw, 72px);
+      font-weight: 300;
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+    }
+
+    .content-title em { font-style: italic; }
+
+    /* ── Project list ── */
+    .projects-section {
+      padding-top: 0;
+    }
+
+    .projects-header {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 0 60px;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--mid);
+      padding-top: 68px;
+    }
+
+    .project-list {
+      list-style: none;
+    }
+
+    .project-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: baseline;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--rule);
+      cursor: default;
+      transition: background 0.15s;
+      margin: 0 -32px;
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+
+    .project-item:first-child { border-top: 1px solid var(--rule); margin-top: 64px; }
+    .project-item:hover { background: rgba(14,14,14,0.03); }
+
+    .project-name {
+      font-family: var(--serif);
+      font-size: 20px;
+      font-weight: 300;
+      color: var(--ink);
+    }
+
+    .project-url {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: var(--mid);
+      display: block;
+      margin-top: 2px;
+    }
+
+    .project-link {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mid);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      padding-bottom: 1px;
+      transition: color 0.2s, border-color 0.2s;
+      white-space: nowrap;
+    }
+
+    .project-item:hover .project-link {
+      color: var(--ink);
+      border-bottom-color: var(--ink);
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--rule);
+      padding: 28px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-left {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mid);
+    }
+
+    .footer-right a {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mid);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-right a:hover { color: var(--ink); }
+
+    /* ── Fade in ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    #content.visible { animation: fadeUp 0.5s ease both; }
+
+    /* ── Mobile ── */
+    @media (max-width: 660px) {
+      .site-wrapper { padding: 0 20px; }
+      nav { padding: 24px 0 22px; }
+      .projects-header { grid-template-columns: 1fr; }
+      .section-label { padding-top: 40px; }
+      .project-item { margin: 0 -20px; padding-left: 20px; padding-right: 20px; }
+      footer { flex-direction: column; gap: 8px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="site-wrapper">
+
+  <nav>
+    <a href="/" class="nav-logo">Russell Greene</a>
+    <a href="/" class="nav-back">← Back</a>
+  </nav>
+
+  <!-- Password Gate -->
+  <div id="gate">
+    <p class="gate-label">Private</p>
+    <h1 class="gate-title">Enter to<br /><em>continue.</em></h1>
+    <div class="gate-form">
+      <div class="gate-input-row">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="off" />
+      </div>
+      <p class="gate-error" id="gate-error">Incorrect password</p>
+      <button class="gate-submit" id="gate-btn">Enter →</button>
+    </div>
+  </div>
+
+  <!-- Protected Content -->
+  <div id="content">
+    <div class="content-header">
+      <p class="content-meta">Vibe coded projects</p>
+      <h1 class="content-title">/vibe</h1>
+    </div>
+
+    <div class="projects-section">
+      <div class="projects-header">
+        <p class="section-label">All<br />Projects</p>
+        <ul class="project-list">
+
+          <li class="project-item">
+            <div>
+              <span class="project-name">Mama</span>
+              <span class="project-url">mama.russellgreene.com</span>
+            </div>
+            <a href="https://mama.russellgreene.com" target="_blank" rel="noopener" class="project-link">Visit ↗</a>
+          </li>
+
+          <!-- Add new projects below in the same format -->
+
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span class="footer-left">© 2025 Russell Greene</span>
+    <span class="footer-right"><a href="/">/home ↗</a></span>
+  </footer>
+
+</div>
+
+<script>
+  const PASSWORD = 'tennis';
+  const SESSION_KEY = 'vibe_unlocked';
+
+  const gate = document.getElementById('gate');
+  const content = document.getElementById('content');
+  const input = document.getElementById('password');
+  const btn = document.getElementById('gate-btn');
+  const error = document.getElementById('gate-error');
+
+  // Stay unlocked for the session
+  if (sessionStorage.getItem(SESSION_KEY) === '1') {
+    gate.style.display = 'none';
+    content.classList.add('visible');
+  }
+
+  function attempt() {
+    if (input.value === PASSWORD) {
+      sessionStorage.setItem(SESSION_KEY, '1');
+      gate.style.display = 'none';
+      content.classList.add('visible');
+    } else {
+      error.classList.add('visible');
+      input.value = '';
+      input.focus();
+    }
+  }
+
+  btn.addEventListener('click', attempt);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
+</script>
+
+</body>
+</html>
