@@ -315,6 +315,20 @@
       .project-item { margin: 0 -20px; padding-left: 20px; padding-right: 20px; }
       footer { flex-direction: column; gap: 8px; text-align: center; }
     }
+
+    .badge-local {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mid);
+      border: 1px solid var(--rule);
+      padding: 2px 6px;
+      margin-left: 10px;
+      vertical-align: middle;
+      position: relative;
+      top: -1px;
+    }
   </style>
 </head>
 <body>
@@ -398,6 +412,14 @@
               <span class="project-url">kcrw.russellgreene.com</span>
             </div>
             <a href="https://kcrw.russellgreene.com" target="_blank" rel="noopener" class="project-link">Visit ↗</a>
+          </li>
+
+          <li class="project-item">
+            <div>
+              <span class="project-name">Pi-hole <span class="badge-local">Local</span></span>
+              <span class="project-url">192.168.86.247/admin</span>
+            </div>
+            <a href="http://192.168.86.247/admin/login" target="_blank" rel="noopener" class="project-link">Visit ↗</a>
           </li>
 
           <!-- Add new projects below in the same format -->
