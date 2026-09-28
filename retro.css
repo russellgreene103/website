@@ -856,3 +856,120 @@ html.term-locked body {
     inset: -14px -10px;
   }
 }
+
+/* ── Contact form send sequence (retro.js) ── */
+
+/* Validation: a DOS error line under the field, in the label style */
+.form-error {
+  padding: 0 0 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pixel-text);
+}
+
+.form-error[hidden] { display: none; }
+
+/* MAIL.EXE: a terminal window that prints the send, line by line */
+.contact-form[hidden] { display: none; }
+
+.mail-panel {
+  padding: 4px;
+  background: var(--pixel);
+  color: var(--on-pixel);
+  box-shadow: 8px 8px 0 var(--ink);
+  font-family: 'VT323', var(--mono);
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.mail-panel[hidden] { display: none; }
+.mail-frame { border: 4px double var(--on-pixel); }
+
+.mail-title {
+  display: flex;
+  gap: 10px;
+  padding: 0 8px;
+  background: var(--paper);
+  color: var(--pixel-text);
+}
+
+.mail-screen {
+  min-height: 12.5em;
+  padding: 8px 12px 14px;
+}
+
+.mail-screen .mail-line {
+  min-height: 1.15em;
+  max-width: none;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mail-screen .mail-result:focus,
+.mail-screen .mail-fallback:focus { outline: none; }
+.mail-screen .mail-result:focus-visible,
+.mail-screen .mail-fallback:focus-visible { outline: 1px dotted var(--on-pixel); outline-offset: 2px; }
+
+/* While the service hasn't answered, a cursor blinks after the held bar */
+.mail-bar.is-holding::after {
+  content: '';
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  margin-left: 0.3em;
+  vertical-align: -0.15em;
+  background: currentColor;
+  animation: block-blink 1s steps(1, end) infinite;
+}
+
+/* Bar cells: solid blocks when filled, a 2px dither when empty (the characters stay underneath) */
+.mail-cells { display: inline-flex; vertical-align: -0.12em; }
+
+.mail-cell {
+  width: 0.5em;
+  height: 1em;
+  overflow: hidden;
+  color: transparent;
+  background: repeating-conic-gradient(var(--on-pixel) 0 25%, transparent 0 50%) 0 0 / 4px 4px;
+}
+
+.mail-cell.is-on { background: var(--on-pixel); }
+
+.mail-fallback a { color: inherit; }
+
+.mail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.mail-button { min-height: 44px; }
+.mail-button:focus-visible { outline-color: var(--on-pixel); }
+
+/* The envelope that flies off on success: paper body, ink lines */
+.mail-envelope {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9998;
+  pointer-events: none;
+  display: grid;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+@media (max-width: 660px) {
+  .mail-panel { font-size: 17px; box-shadow: 6px 6px 0 var(--ink); }
+  .mail-screen { padding: 8px 10px 14px; }
+  .form-error { font-size: 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mail-bar.is-holding::after { animation: none; }
+}

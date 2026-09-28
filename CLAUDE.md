@@ -37,6 +37,7 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 - **Expertise panel:** resting on, focusing, tapping or clicking (to pin) a skill types its description and related work into a DOS panel. On touch screens and at 660px or narrower (`.xp-inline`), the same panel opens inline under the tapped skill instead.
 - **Name glitch:** every 2–5s, a few letters of the hero `<h1>` pixelate through canvas overlays. The heading text itself is never touched.
 - **Work list:** shows six rows, and a DOS button lists the rest.
+- **Contact form:** JS turns off browser validation for DOS error lines under each field (`.form-error`), then swaps the form for a MAIL.EXE panel that dials, fills a block progress bar and holds at 90% until Formspree answers. Success (only on a confirmed OK) flies a pixel envelope off with a click effect and offers SEND ANOTHER; failure offers Abort, Retry, Fail. The endpoint and request are unchanged. Test it with the request intercepted and mocked; never post to the real form from tests.
 
 ## Design rules
 
