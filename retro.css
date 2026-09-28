@@ -1,0 +1,190 @@
+/* Retro effects shared by the homepage and /vibe. Colours and fonts come from each page's :root. */
+
+/* ── Pixel cursor (fine pointers only; elements are added by JS) ── */
+.pixel-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.pixel-cursor svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+}
+
+.pixel-cursor .px-o { fill: var(--paper); }
+.pixel-cursor .px-i { fill: var(--ink); }
+
+/* Retro link hand and hourglass: paper body, ink outline, finger lines and sand */
+.pixel-cursor .pixel-hand .px-o,
+.pixel-cursor .pixel-hourglass .px-o { fill: var(--ink); }
+.pixel-cursor .pixel-hand .px-i,
+.pixel-cursor .pixel-hourglass .px-i { fill: var(--paper); }
+
+/* Hourglass is centred on the pointer; its four sand frames each show for a quarter cycle */
+.pixel-cursor .pixel-hourglass {
+  position: absolute;
+  left: -12px;
+  top: -16px;
+  display: none;
+}
+
+.pixel-cursor .pixel-hourglass svg { visibility: hidden; }
+
+.pixel-cursor .pixel-hand {
+  left: -12px; /* fingertip sits on the pointer */
+  display: none;
+}
+
+/* DOS preview window over work rows (fine pointers only; element added by JS) */
+.dos-window {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9997;
+  display: none;
+  pointer-events: none;
+  padding: 3px;
+  background: var(--pixel);
+  color: var(--paper);
+  box-shadow: 6px 6px 0 var(--ink); /* text-mode shadow, one cell down and right */
+  font-family: 'Silkscreen', var(--mono);
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dos-window.is-open,
+.dos-window.is-closing { display: block; }
+.dos-window.is-open { animation: dos-open 120ms steps(1, end) both; }
+.dos-window.is-closing { animation: dos-close 120ms steps(1, end) both; }
+
+.dos-frame { border: 3px double var(--paper); }
+
+.dos-title {
+  display: flex;
+  gap: 6px;
+  background: var(--paper);
+  color: var(--pixel);
+  padding: 3px 5px 2px;
+}
+
+.dos-body {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  gap: 5px 8px;
+  padding: 7px 8px 8px;
+}
+
+.dos-body span { min-height: 8px; }
+.dos-body .dos-wide { grid-column: 1 / -1; }
+
+.pixel-bit {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 4px;
+  background: var(--ink);
+  pointer-events: none;
+  z-index: 9998;
+  scale: 0;
+}
+
+.pixel-bit.is-big { width: 8px; height: 8px; }
+.pixel-bit.is-blue { background: var(--pixel); }
+.pixel-bit.is-trail { scale: 1; animation: pixel-fade 700ms steps(1, end) forwards; }
+.pixel-bit.is-burst { animation: pixel-burst 320ms steps(1, end) forwards; }
+
+html.has-cursor,
+html.has-cursor * { cursor: none !important; }
+
+html.has-cursor input,
+html.has-cursor textarea { cursor: text !important; }
+
+html.cursor-visible .pixel-cursor { opacity: 1; }
+html.cursor-over-field .pixel-cursor { opacity: 0; }
+
+html.cursor-link .pixel-arrow { display: none; }
+html.cursor-link .pixel-hand {
+  display: block;
+  animation: pixel-bob 0.5s steps(1, end) infinite;
+}
+
+html.cursor-wait .pixel-arrow { display: none; }
+html.cursor-wait .pixel-hourglass { display: block; }
+html.cursor-wait .pixel-hourglass svg { animation: pixel-sand 1s steps(1, end) infinite; }
+html.cursor-wait .pixel-hourglass svg:nth-child(2) { animation-delay: -0.75s; }
+html.cursor-wait .pixel-hourglass svg:nth-child(3) { animation-delay: -0.5s; }
+html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
+
+@keyframes pixel-sand {
+  0%        { visibility: visible; }
+  25%, 100% { visibility: hidden; }
+}
+
+@keyframes pixel-bob {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-1px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes dos-open {
+  0%        { scale: 0; }
+  33%       { scale: 0.5; }
+  66%, 100% { scale: 1; }
+}
+
+@keyframes dos-close {
+  0%        { scale: 1; }
+  33%       { scale: 0.5; }
+  66%, 100% { scale: 0; }
+}
+
+/* Size and fall share one transform so shrinking doesn't also shorten the drop */
+@keyframes pixel-fade {
+  0%   { transform: translateY(0) scale(1); }
+  25%  { transform: translateY(calc(var(--fall) / 2)) scale(1); }
+  50%  { transform: translateY(calc(var(--fall) / 2)) scale(0.5); }
+  75%  { transform: translateY(var(--fall)) scale(0.5); }
+  100% { transform: translateY(var(--fall)) scale(0); }
+}
+
+@keyframes pixel-burst {
+  0%   { scale: 1; transform: translate(0, 0); }
+  25%  { transform: translate(calc(var(--dx) / 3), calc(var(--dy) / 3)); }
+  50%  { transform: translate(calc(var(--dx) * 2 / 3), calc(var(--dy) * 2 / 3)); }
+  75%  { transform: translate(var(--dx), var(--dy)); }
+  100% { scale: 0; transform: translate(var(--dx), var(--dy)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.cursor-link .pixel-hand,
+  .dos-window.is-open,
+  .dos-window.is-closing { animation: none; }
+}
+
+/* Dithered DOS layer drawn over the photo by JS; cleared cells let the real photo through */
+.hero-dither {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+}
+
+@media (max-width: 660px) {
+  .hero-dither { border-radius: 50%; }
+}

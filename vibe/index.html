@@ -6,7 +6,7 @@
   <title>Russell Greene — /vibe</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&family=Silkscreen&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -15,6 +15,7 @@
       --paper: #f5f3ef;
       --mid: #999;
       --rule: #d8d5cf;
+      --pixel: #1f3bd6;
       --serif: 'Cormorant Garamond', Georgia, serif;
       --mono: 'DM Mono', 'Courier New', monospace;
     }
@@ -330,6 +331,7 @@
       top: -1px;
     }
   </style>
+  <link rel="stylesheet" href="/retro.css" />
 </head>
 <body>
 
@@ -499,6 +501,8 @@
   btn.addEventListener('click', attempt);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
 </script>
+
+<script src="/retro.js"></script>
 
 </body>
 </html>
