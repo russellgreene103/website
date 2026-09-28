@@ -3,6 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1f3bd6" />
+  <script>
+    // Accent theme for this visit, picked before first paint: ?theme= forces one, otherwise a random
+    // theme that isn't the previous visit's. Without JS the page stays blue.
+    (function () {
+      var colors = { blue: '#1f3bd6', green: '#10633b', red: '#c52e13', yellow: '#d7a13f' };
+      var names = Object.keys(colors), last = null, theme;
+      var forced = new URLSearchParams(location.search).get('theme');
+      try { last = localStorage.getItem('retro-theme'); } catch (e) {}
+      if (colors[forced]) theme = forced;
+      else {
+        var choices = names.filter(function (n) { return n !== last; });
+        theme = choices[Math.floor(Math.random() * choices.length)];
+      }
+      try { localStorage.setItem('retro-theme', theme); } catch (e) {}
+      document.documentElement.dataset.theme = theme;
+      document.querySelector('meta[name="theme-color"]').content = colors[theme];
+    })();
+  </script>
   <title>Russell Greene — Executive Producer</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <meta name="description" content="Executive Producer at BUCK. Orchestrating complex productions for global brands." />
@@ -18,7 +37,9 @@
       --mid: #999;
       --rule: #d8d5cf;
       --accent: #0e0e0e;
-      --pixel: #1f3bd6;
+      --pixel: #1f3bd6;         /* accent fill (themes override these in retro.css) */
+      --on-pixel: var(--paper); /* text and icons on --pixel */
+      --pixel-text: #1f3bd6;    /* accent text on --paper */
       --serif: 'Cormorant Garamond', Georgia, serif;
       --mono: 'DM Mono', 'Courier New', monospace;
     }
@@ -176,8 +197,8 @@
     }
 
     .expertise-item:hover .expertise-name,
-    .expertise-item.is-selected .expertise-name { color: var(--pixel); }
-    .expertise-item:focus-visible { outline: 1px solid var(--pixel); outline-offset: 2px; }
+    .expertise-item.is-selected .expertise-name { color: var(--pixel-text); }
+    .expertise-item:focus-visible { outline: 1px solid var(--pixel-text); outline-offset: 2px; }
 
     /* Pixel icons are drawn in by JS; the slot keeps its width either way */
     .expertise-icon {
@@ -558,6 +579,7 @@
       </div>
       <div class="hero-photo-wrap">
         <img src="Russell_Greene_Headshot.png" alt="Russell Greene" class="hero-photo" />
+        <script>(function (t) { if (t && t !== 'blue') document.currentScript.previousElementSibling.src = 'Russell_Greene_Headshot_' + t + '.png'; })(document.documentElement.dataset.theme);</script>
       </div>
     </div>
   </section>

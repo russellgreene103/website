@@ -2,6 +2,20 @@
 
 const textOf = (el, sel) => el.querySelector(sel).textContent.trim();
 
+// Accent themes: the colours match the inline <head> script and retro.css
+const THEMES = { blue: '#1f3bd6', green: '#10633b', red: '#c52e13', yellow: '#d7a13f' };
+const currentTheme = () => (THEMES[document.documentElement.dataset.theme] ? document.documentElement.dataset.theme : 'blue');
+const themePhoto = theme => (theme === 'blue' ? '/Russell_Greene_Headshot.png' : `/Russell_Greene_Headshot_${theme}.png`);
+const hexRgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+
+// Switch the whole site's accent (the headshot listens for retro:theme and redraws)
+function setTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = THEMES[theme];
+  document.dispatchEvent(new CustomEvent('retro:theme', { detail: theme }));
+}
+
 // A /vibe project's name without its Local badge
 function projectName(row) {
   return [...row.querySelector('.project-name').childNodes]
@@ -697,6 +711,7 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
 
 // Retro headshot — the photo is DOS-dithered onto a canvas above it. On hover (or tap) the whole
 // image resolves through a colour mosaic tier by tier, then the canvas clears to show the real photo.
+// Each theme has its own photo; on the recoloured ones a cutout mask marks the backdrop.
 (function () {
   const wrap = document.querySelector('.hero-photo-wrap');
   const img = wrap && wrap.querySelector('.hero-photo');
@@ -735,6 +750,21 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
   const isBlue = (r, g, b) => b - (r + g) / 2 > 70;
   const threshold = (x, y) => (BAYER[(y % 4) * 4 + (x % 4)] + 0.5) / 16;
 
+  let theme = currentTheme(), accent = hexRgb(THEMES[theme]);
+  const mask = new Image();
+  let maskLoaded = null;
+  // Blue keeps its original colour test; the recoloured photos need the mask, loaded only then
+  const ready = () => {
+    if (theme === 'blue') return Promise.resolve();
+    if (!maskLoaded) {
+      maskLoaded = new Promise(resolve => {
+        mask.onload = mask.onerror = resolve;
+        mask.src = '/Russell_Greene_Headshot_mask.png';
+      });
+    }
+    return maskLoaded;
+  };
+
   function objectPosition() {
     return getComputedStyle(img).objectPosition.split(' ')
       .map(v => v.endsWith('%') ? parseFloat(v) / 100 : 0.5);
@@ -754,7 +784,16 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
     const sctx = src.getContext('2d');
     sctx.imageSmoothingQuality = 'high';
     sctx.drawImage(img, (iw - sw) * px, (ih - sh) * py, sw, sh, 0, 0, cols, rows);
-    return sctx.getImageData(0, 0, cols, rows);
+    const data = sctx.getImageData(0, 0, cols, rows);
+    // The mask, sampled with the same crop: where it's dark, the cell is backdrop
+    data.backdrop = null;
+    if (theme !== 'blue' && mask.naturalWidth) {
+      sctx.clearRect(0, 0, cols, rows);
+      sctx.drawImage(mask, (iw - sw) * px, (ih - sh) * py, sw, sh, 0, 0, cols, rows);
+      const m = sctx.getImageData(0, 0, cols, rows).data;
+      data.backdrop = new Uint8Array(cols * rows).map((_, p) => (m[p * 4] < 128 ? 1 : 0));
+    }
+    return data;
   }
 
   function dither(data) {
@@ -764,7 +803,7 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
     for (let p = 0; p < n; p++) {
       const r = d[p * 4], g = d[p * 4 + 1], b = d[p * 4 + 2];
       lum[p] = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-      blue[p] = isBlue(r, g, b) ? 1 : 0;
+      blue[p] = data.backdrop ? data.backdrop[p] : (isBlue(r, g, b) ? 1 : 0);
     }
 
     for (let y = 0; y < rows; y++) {
@@ -782,6 +821,12 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
           }
           l += SHARPEN * (l - sum / count);
           l = (l - 0.5) * CONTRAST + 0.5 + LIFT;
+        }
+        if (blue[p] && theme !== 'blue') {
+          // Recoloured backdrops are flat, so they dither straight to the theme colour
+          const i = p * 4;
+          d[i] = accent[0]; d[i + 1] = accent[1]; d[i + 2] = accent[2]; d[i + 3] = 255;
+          continue;
         }
         const ramp = blue[p] ? BLUE_RAMP : GRAY_RAMP;
         const t = threshold(x, y);
@@ -826,6 +871,7 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
     const base = sample();
     tiers = buildTiers(base);
     dithered = new ImageData(new Uint8ClampedArray(base.data), cols, rows);
+    dithered.backdrop = base.backdrop;
     dither(dithered);
   }
 
@@ -896,10 +942,13 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
     if (stage !== target) stageTimer = setInterval(step, ms);
   }
 
+  // Runs for the first photo and again whenever a theme switch loads another
   function onLoad() {
-    build();
-    render();
-    maybeStart();
+    ready().then(() => {
+      build();
+      render();
+      maybeStart();
+    });
   }
 
   layout();
@@ -912,11 +961,16 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
   });
   io.observe(wrap);
 
+  img.addEventListener('load', onLoad);
+  img.addEventListener('error', () => canvas.remove()); // fall back to the plain <img>
   if (img.complete && img.naturalWidth) onLoad();
-  else {
-    img.addEventListener('load', onLoad);
-    img.addEventListener('error', () => canvas.remove()); // fall back to the plain <img>
-  }
+
+  // COLOR in the terminal: swap to that theme's photo; its load event rebuilds the dither and mosaics
+  document.addEventListener('retro:theme', e => {
+    theme = e.detail;
+    accent = hexRgb(THEMES[theme]);
+    img.src = themePhoto(theme);
+  });
 
   if (fine) {
     wrap.addEventListener('pointerenter', e => {
@@ -1198,7 +1252,7 @@ const retroTerminal = (function () {
     gameHost.hidden = false;
     title.textContent = 'C:\\RUSSELL\\ROCKS.EXE';
     const background = getComputedStyle(root).getPropertyValue('--pixel').trim() || '#1f3bd6';
-    game = window.RocksGame.create(gameHost, { scale, touch, background, announce, onExit: endRocks });
+    game = window.RocksGame.create(gameHost, { scale, touch, background, theme: currentTheme(), announce, onExit: endRocks });
     gameHost.focus();
     announce(touch
       ? 'ROCKS.EXE is running. Tap FIRE to start. Buttons below the game turn left and right, thrust, fire, and jump to hyperspace.'
@@ -1248,6 +1302,7 @@ const retroTerminal = (function () {
       'VIBE      Go to /vibe',
       'HOME      Go to the homepage',
       'TIME      New York time and date',
+      'COLOR     Change the accent color',
       'VER       Version',
       'CLS       Clear the screen',
       'EXIT      Close the terminal',
@@ -1267,6 +1322,17 @@ const retroTerminal = (function () {
     home: () => { location.href = '/'; },
     time,
     ver: () => print('', 'RUSSELL-DOS Version 6.22', ''),
+    // A nod to DOS COLOR: lists the themes, or switches the whole site until the next page load
+    color: arg => {
+      const names = Object.keys(THEMES);
+      if (!arg) {
+        print(...names.map(n => `${n === currentTheme() ? '*' : ' '} ${n.toUpperCase()}`), '', 'Type COLOR and a name to switch, e.g. COLOR RED.');
+        return;
+      }
+      if (!THEMES[arg]) { print('Invalid color. Try BLUE, GREEN, RED or YELLOW.'); return; }
+      setTheme(arg);
+      print(`Color set to ${arg.toUpperCase()}.`);
+    },
     cls: () => { output.textContent = ''; },
     exit: close,
     win,

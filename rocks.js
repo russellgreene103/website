@@ -15,9 +15,17 @@ window.RocksGame = (function () {
   const C = {
     black: rgba('#000000'), white: rgba('#FFFFFF'), lgray: rgba('#AAAAAA'), dgray: rgba('#555555'),
     lcyan: rgba('#55FFFF'), yellow: rgba('#FFFF55'), lgreen: rgba('#55FF55'), lred: rgba('#FF5555'),
-    lmagenta: rgba('#FF55FF'),
+    lmagenta: rgba('#FF55FF'), blue: rgba('#0000AA'), red: rgba('#AA0000'), magenta: rgba('#AA00AA'),
   };
-  const ROCK_COLORS = [C.lgray, C.lcyan, C.yellow];
+  // Per-theme palettes from the EGA colours, so everything stays clear on each backdrop.
+  // Blue, green and red take bright colours; yellow flips to dark ones. Every text colour
+  // (text, accent, hi, dim) is at least 4.5:1 against its backdrop; rocks and sparks are decoration.
+  const PALETTES = {
+    blue: { ship: C.white, rocks: [C.lgray, C.lcyan, C.yellow], bullet: C.lgreen, text: C.white, accent: C.lcyan, hi: C.yellow, dim: C.lcyan, shadow: C.black, logoShadow: C.black, flame: [C.yellow, C.lred], spark: C.white },
+    green: { ship: C.white, rocks: [C.lgray, C.lcyan, C.yellow], bullet: C.lmagenta, text: C.white, accent: C.lcyan, hi: C.yellow, dim: C.lcyan, shadow: C.black, logoShadow: C.black, flame: [C.yellow, C.lred], spark: C.white },
+    red: { ship: C.white, rocks: [C.lgray, C.lcyan, C.yellow], bullet: C.lgreen, text: C.white, accent: C.lcyan, hi: C.yellow, dim: C.lcyan, shadow: C.black, logoShadow: C.black, flame: [C.yellow, C.white], spark: C.white },
+    yellow: { ship: C.black, rocks: [C.blue, C.dgray, C.red], bullet: C.magenta, text: C.black, accent: C.black, hi: C.blue, dim: C.blue, shadow: null, logoShadow: C.black, flame: [C.red, C.lred], spark: C.black },
+  };
 
   // 3×5 bitmap font, one string of 15 bits per glyph, read row by row
   const FONT = {
@@ -56,8 +64,9 @@ window.RocksGame = (function () {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(list)); } catch { /* storage unavailable: keep playing */ }
   }
 
-  function create(host, { onExit = () => {}, announce = () => {}, scale = 2, touch = false, background = '#1f3bd6' } = {}) {
+  function create(host, { onExit = () => {}, announce = () => {}, scale = 2, touch = false, background = '#1f3bd6', theme = 'blue' } = {}) {
     const BG = rgba(background);
+    const P = PALETTES[theme] || PALETTES.blue;
     const canvas = document.createElement('canvas');
     canvas.className = 'rocks-canvas';
     canvas.width = W;
@@ -113,7 +122,7 @@ window.RocksGame = (function () {
     }
 
     function text(str, x, y, c, size = 1, align = 'left', shadow = true) {
-      if (shadow) glyphs(str, x + size, y + size, C.black, size, align);
+      if (shadow && P.shadow) glyphs(str, x + size, y + size, P.shadow, size, align);
       glyphs(str, x, y, c, size, align);
     }
 
@@ -158,7 +167,7 @@ window.RocksGame = (function () {
         return [Math.cos(a) * rr, Math.sin(a) * rr];
       });
       return {
-        x, y, size, r, shape, color: ROCK_COLORS[Math.floor(Math.random() * ROCK_COLORS.length)],
+        x, y, size, r, shape, color: P.rocks[Math.floor(Math.random() * P.rocks.length)],
         vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, rot: rand(0, TAU), spin: rand(-0.02, 0.02),
       };
     }
@@ -200,7 +209,7 @@ window.RocksGame = (function () {
 
     function splitRock(rock, index) {
       world.rocks.splice(index, 1);
-      burst(rock.x, rock.y, 6 + rock.size * 4, [rock.color, C.white]);
+      burst(rock.x, rock.y, 6 + rock.size * 4, [rock.color, P.spark]);
       sound.crunch(0.12 + rock.size * 0.05);
       if (rock.size > 1) {
         const speed = Math.hypot(rock.vx, rock.vy) * (rock.size === 3 ? 1.4 : 1.3);
@@ -220,7 +229,7 @@ window.RocksGame = (function () {
     function killShip() {
       const s = world.ship;
       s.alive = false;
-      burst(s.x, s.y, 28, [C.white, C.yellow, C.lred], 2.2);
+      burst(s.x, s.y, 28, [P.spark, ...P.flame], 2.2);
       sound.crunch(0.45);
       world.lives--;
       world.respawnTimer = 100;
@@ -346,11 +355,11 @@ window.RocksGame = (function () {
     }
 
     function drawScores(y) {
-      text('HIGH SCORES', W / 2, y, C.yellow, 1, 'center');
+      text('HIGH SCORES', W / 2, y, P.hi, 1, 'center');
       for (let i = 0; i < 5; i++) {
         const e = world.scores[i];
         const row = e ? `${i + 1}. ${e.n}  ${String(e.s).padStart(6, ' ')}` : `${i + 1}. ---  ${'0'.padStart(6, ' ')}`;
-        text(row, W / 2, y + 10 + i * 8, e ? C.white : C.lgray, 1, 'center');
+        text(row, W / 2, y + 10 + i * 8, e ? P.text : P.dim, 1, 'center');
       }
     }
 
@@ -362,63 +371,63 @@ window.RocksGame = (function () {
       if (world.state !== 'entry') {
         for (const r of world.rocks) wrapped(r.x, r.y, r.r + 2, (x, y) => poly(r.shape, x, y, r.rot, r.color));
       }
-      for (const b of world.bullets) rect(b.x - 1, b.y - 1, 2, 2, C.lgreen);
+      for (const b of world.bullets) rect(b.x - 1, b.y - 1, 2, 2, P.bullet);
       for (const p of world.particles) if (p.life > 12 || p.life % 4 < 2) plot(p.x, p.y, p.color);
 
       const s = world.ship;
       if (world.state === 'playing' && s && s.alive && (s.invuln <= 0 || world.frame % 8 < 5)) {
         wrapped(s.x, s.y, 9, (x, y) => {
-          poly(SHIP, x, y, s.a, C.white);
+          poly(SHIP, x, y, s.a, P.ship);
           if (s.thrusting && world.frame % 4 < 2) {
-            poly([[-3, -2], [-7 - Math.floor(Math.random() * 3), 0], [-3, 2]], x, y, s.a, world.frame % 8 < 4 ? C.yellow : C.lred);
+            poly([[-3, -2], [-7 - Math.floor(Math.random() * 3), 0], [-3, 2]], x, y, s.a, P.flame[world.frame % 8 < 4 ? 0 : 1]);
           }
         });
       }
 
       if (world.state === 'playing' || world.state === 'over') {
-        text(String(world.score), 4, 3, C.white);
+        text(String(world.score), 4, 3, P.text);
         const hi = Math.max(world.score, world.scores[0] ? world.scores[0].s : 0);
-        text(`HI ${hi}`, W / 2, 3, C.yellow, 1, 'center');
-        for (let i = 0; i < Math.min(world.lives, 6); i++) drawShipIcon(W - 6 - i * 9, 7, C.white);
+        text(`HI ${hi}`, W / 2, 3, P.hi, 1, 'center');
+        for (let i = 0; i < Math.min(world.lives, 6); i++) drawShipIcon(W - 6 - i * 9, 7, P.text);
         if (world.state === 'playing' && !world.rocks.length && world.waveTimer > 0) {
-          text(`WAVE ${world.wave + 1}`, W / 2, H / 2 - 6, C.white, 2, 'center');
+          text(`WAVE ${world.wave + 1}`, W / 2, H / 2 - 6, P.text, 2, 'center');
         }
       }
 
       if (world.state === 'title') {
         // Chunky logo: a dark drop shadow, then the letters
-        text('ROCKS', W / 2 + 3, 25, C.black, 7, 'center', false);
-        text('ROCKS', W / 2, 22, C.yellow, 7, 'center', false);
-        if (blink()) text('PRESS SPACE TO START', W / 2, 70, C.white, 1, 'center');
+        text('ROCKS', W / 2 + 3, 25, P.logoShadow, 7, 'center', false);
+        text('ROCKS', W / 2, 22, P.hi, 7, 'center', false);
+        if (blink()) text('PRESS SPACE TO START', W / 2, 70, P.text, 1, 'center');
         drawScores(88);
-        text('ARROWS OR WASD: TURN/THRUST  SPACE: FIRE', W / 2, 150, C.lcyan, 1, 'center');
-        text('DOWN: HYPERSPACE  P: PAUSE  ESC: QUIT', W / 2, 160, C.lcyan, 1, 'center');
-        text(`M: SOUND ${world.sound ? 'ON' : 'OFF'}`, W / 2, 176, C.white, 1, 'center');
-        text('(C) 2026 RUSSELL-DOS', W / 2, 190, C.lgray, 1, 'center');
+        text('ARROWS OR WASD: TURN/THRUST  SPACE: FIRE', W / 2, 150, P.accent, 1, 'center');
+        text('DOWN: HYPERSPACE  P: PAUSE  ESC: QUIT', W / 2, 160, P.accent, 1, 'center');
+        text(`M: SOUND ${world.sound ? 'ON' : 'OFF'}`, W / 2, 176, P.text, 1, 'center');
+        text('(C) 2026 RUSSELL-DOS', W / 2, 190, P.dim, 1, 'center');
       }
 
       if (world.state === 'over') {
-        text('GAME OVER', W / 2, 80, C.white, 3, 'center');
-        text(`SCORE ${world.lastScore}`, W / 2, 104, C.yellow, 1, 'center');
+        text('GAME OVER', W / 2, 80, P.text, 3, 'center');
+        text(`SCORE ${world.lastScore}`, W / 2, 104, P.hi, 1, 'center');
       }
 
       if (world.state === 'entry') {
-        text('GAME OVER', W / 2, 30, C.white, 3, 'center');
-        text(`SCORE ${world.lastScore}`, W / 2, 56, C.yellow, 1, 'center');
-        text('NEW HIGH SCORE! ENTER YOUR INITIALS', W / 2, 76, C.white, 1, 'center');
+        text('GAME OVER', W / 2, 30, P.text, 3, 'center');
+        text(`SCORE ${world.lastScore}`, W / 2, 56, P.hi, 1, 'center');
+        text('NEW HIGH SCORE! ENTER YOUR INITIALS', W / 2, 76, P.text, 1, 'center');
         world.initials.forEach((ch, i) => {
           const x = W / 2 - 30 + i * 22;
-          text(ch, x, 96, i === world.initialsAt ? C.yellow : C.white, 4);
-          if (i === world.initialsAt && blink(20)) rect(x, 118, 11, 2, C.yellow);
+          text(ch, x, 96, i === world.initialsAt ? P.hi : P.text, 4);
+          if (i === world.initialsAt && blink(20)) rect(x, 118, 11, 2, P.hi);
         });
-        text('TYPE OR UP/DOWN, ENTER TO CONFIRM', W / 2, 140, C.lcyan, 1, 'center');
+        text('TYPE OR UP/DOWN, ENTER TO CONFIRM', W / 2, 140, P.accent, 1, 'center');
       }
 
       if (world.state === 'scores') {
-        text('GAME OVER', W / 2, 24, C.white, 3, 'center');
-        text(`SCORE ${world.lastScore}`, W / 2, 50, C.yellow, 1, 'center');
+        text('GAME OVER', W / 2, 24, P.text, 3, 'center');
+        text(`SCORE ${world.lastScore}`, W / 2, 50, P.hi, 1, 'center');
         drawScores(72);
-        if (blink()) text('PRESS SPACE TO PLAY AGAIN', W / 2, 136, C.white, 1, 'center');
+        if (blink()) text('PRESS SPACE TO PLAY AGAIN', W / 2, 136, P.text, 1, 'center');
       }
 
       if (world.paused) {

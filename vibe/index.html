@@ -3,6 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1f3bd6" />
+  <script>
+    // Accent theme for this visit, picked before first paint: ?theme= forces one, otherwise a random
+    // theme that isn't the previous visit's. Without JS the page stays blue.
+    (function () {
+      var colors = { blue: '#1f3bd6', green: '#10633b', red: '#c52e13', yellow: '#d7a13f' };
+      var names = Object.keys(colors), last = null, theme;
+      var forced = new URLSearchParams(location.search).get('theme');
+      try { last = localStorage.getItem('retro-theme'); } catch (e) {}
+      if (colors[forced]) theme = forced;
+      else {
+        var choices = names.filter(function (n) { return n !== last; });
+        theme = choices[Math.floor(Math.random() * choices.length)];
+      }
+      try { localStorage.setItem('retro-theme', theme); } catch (e) {}
+      document.documentElement.dataset.theme = theme;
+      document.querySelector('meta[name="theme-color"]').content = colors[theme];
+    })();
+  </script>
   <title>Russell Greene — /vibe</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -15,7 +34,9 @@
       --paper: #f5f3ef;
       --mid: #999;
       --rule: #d8d5cf;
-      --pixel: #1f3bd6;
+      --pixel: #1f3bd6;         /* accent fill (themes override these in retro.css) */
+      --on-pixel: var(--paper); /* text and icons on --pixel */
+      --pixel-text: #1f3bd6;    /* accent text on --paper */
       --serif: 'Cormorant Garamond', Georgia, serif;
       --mono: 'DM Mono', 'Courier New', monospace;
     }

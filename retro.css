@@ -1,5 +1,12 @@
 /* Retro effects shared by the homepage and /vibe. Colours and fonts come from each page's :root. */
 
+/* Accent themes, chosen per visit by the inline script in each page's <head> (blue without JS).
+   --pixel fills; --on-pixel is text on those fills; --pixel-text is accent text on --paper. */
+html[data-theme="blue"]   { --pixel: #1f3bd6; --on-pixel: var(--paper); --pixel-text: #1f3bd6; }
+html[data-theme="green"]  { --pixel: #10633b; --on-pixel: var(--paper); --pixel-text: #10633b; }
+html[data-theme="red"]    { --pixel: #c52e13; --on-pixel: var(--paper); --pixel-text: #c52e13; }
+html[data-theme="yellow"] { --pixel: #d7a13f; --on-pixel: var(--ink);   --pixel-text: #8a5d0a; }
+
 /* ── Pixel cursor (fine pointers only; elements are added by JS) ── */
 .pixel-cursor {
   position: fixed;
@@ -54,7 +61,7 @@
   pointer-events: none;
   padding: 3px;
   background: var(--pixel);
-  color: var(--paper);
+  color: var(--on-pixel);
   box-shadow: 6px 6px 0 var(--ink); /* text-mode shadow, one cell down and right */
   font-family: 'Silkscreen', var(--mono);
   font-size: 8px;
@@ -69,13 +76,13 @@
 .dos-window.is-open { animation: dos-open 120ms steps(1, end) both; }
 .dos-window.is-closing { animation: dos-close 120ms steps(1, end) both; }
 
-.dos-frame { border: 3px double var(--paper); }
+.dos-frame { border: 3px double var(--on-pixel); }
 
 .dos-title {
   display: flex;
   gap: 6px;
   background: var(--paper);
-  color: var(--pixel);
+  color: var(--pixel-text);
   padding: 3px 5px 2px;
 }
 
@@ -199,16 +206,16 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 
 /* BUCK: a filled-in DOS form field, value on a dotted fill line that runs a little past the text */
 .dos-field {
-  color: var(--pixel);
+  color: var(--pixel-text);
   padding: 0 2ch 1px 0;
-  border-bottom: 1px dotted var(--pixel);
+  border-bottom: 1px dotted var(--pixel-text);
 }
 
 /* The cursor takes no space, so showing it never nudges the line */
 .dos-field-cursor { display: none; margin-right: -0.7em; }
 
 @media (hover: hover) and (pointer: fine) {
-  .dos-field:hover { color: var(--paper); background: var(--pixel); }
+  .dos-field:hover { color: var(--on-pixel); background: var(--pixel); }
   .dos-field:hover .dos-field-cursor { display: inline-block; }
 }
 
@@ -243,7 +250,7 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 }
 
 .dos-label.is-shown { visibility: visible; }
-.dl-prompt { color: var(--pixel); }
+.dl-prompt { color: var(--pixel-text); }
 .dl-cmd { color: var(--ink); }
 
 /* Partner sequence: one name lit at a time, with hard cuts */
@@ -270,21 +277,21 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
   width: min(640px, 100%);
   padding: 4px;
   background: var(--pixel);
-  color: var(--paper);
+  color: var(--on-pixel);
   box-shadow: 8px 8px 0 var(--ink);
   font-family: 'VT323', var(--mono);
   font-size: 20px;
   line-height: 1.15;
 }
 
-.dos-term-frame { border: 4px double var(--paper); }
+.dos-term-frame { border: 4px double var(--on-pixel); }
 
 .dos-term-title {
   display: flex;
   align-items: center;
   gap: 10px;
   background: var(--paper);
-  color: var(--pixel);
+  color: var(--pixel-text);
   padding: 0 8px;
 }
 
@@ -297,7 +304,7 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
   cursor: pointer;
 }
 
-.dos-term-close:focus-visible { outline: 2px solid var(--pixel); outline-offset: 1px; }
+.dos-term-close:focus-visible { outline: 2px solid var(--pixel-text); outline-offset: 1px; }
 
 .dos-term-screen {
   height: min(360px, 50vh);
@@ -414,7 +421,7 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
   letter-spacing: 0.05em;
   text-transform: uppercase;
   white-space: nowrap;
-  color: var(--paper);
+  color: var(--on-pixel);
 }
 
 .work-card-media {
@@ -446,7 +453,7 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
   font-family: 'Silkscreen', var(--mono);
   font-size: 16px;
   text-transform: uppercase;
-  color: var(--paper);
+  color: var(--on-pixel);
 }
 
 .work-card.is-missing .work-card-fallback { display: grid; }
@@ -502,7 +509,7 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 
 .xp-pinned {
   margin-left: 10px;
-  color: var(--pixel);
+  color: var(--pixel-text);
   letter-spacing: 0.1em;
 }
 
@@ -521,7 +528,7 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 }
 
 .xp-see a {
-  color: var(--pixel);
+  color: var(--pixel-text);
   text-decoration: none;
   border-bottom: 1px solid currentColor;
 }
@@ -557,7 +564,7 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 }
 
 .dos-button:hover {
-  color: var(--paper);
+  color: var(--on-pixel);
   background: var(--pixel);
 }
 
@@ -569,7 +576,7 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 }
 
 .dos-button:focus-visible {
-  outline: 2px solid var(--pixel);
+  outline: 2px solid var(--pixel-text);
   outline-offset: 4px;
 }
 
