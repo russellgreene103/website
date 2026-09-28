@@ -5,19 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#1f3bd6" />
   <script>
-    // Accent theme for this visit, picked before first paint: ?theme= forces one, otherwise a random
-    // theme that isn't the previous visit's. Without JS the page stays blue.
+    // Accent theme, set before first paint: always blue, except ?theme= forces one for testing.
+    // Clicking the headshot or the terminal's COLOR command switches it for the rest of the visit.
     (function () {
       var colors = { blue: '#1f3bd6', green: '#10633b', red: '#c52e13', yellow: '#d7a13f' };
-      var names = Object.keys(colors), last = null, theme;
-      var forced = new URLSearchParams(location.search).get('theme');
-      try { last = localStorage.getItem('retro-theme'); } catch (e) {}
-      if (colors[forced]) theme = forced;
-      else {
-        var choices = names.filter(function (n) { return n !== last; });
-        theme = choices[Math.floor(Math.random() * choices.length)];
-      }
-      try { localStorage.setItem('retro-theme', theme); } catch (e) {}
+      var theme = new URLSearchParams(location.search).get('theme');
+      if (!colors[theme]) theme = 'blue';
       document.documentElement.dataset.theme = theme;
       document.querySelector('meta[name="theme-color"]').content = colors[theme];
     })();

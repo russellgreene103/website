@@ -128,7 +128,8 @@ html.cursor-link .pixel-hand {
   animation: pixel-bob 0.5s steps(1, end) infinite;
 }
 
-html.cursor-wait .pixel-arrow { display: none; }
+html.cursor-wait .pixel-arrow,
+html.cursor-wait .pixel-hand { display: none; }
 html.cursor-wait .pixel-hourglass { display: block; }
 html.cursor-wait .pixel-hourglass svg { animation: pixel-sand 1s steps(1, end) infinite; }
 html.cursor-wait .pixel-hourglass svg:nth-child(2) { animation-delay: -0.75s; }

@@ -709,8 +709,9 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
   });
 })();
 
-// Retro headshot — the photo is DOS-dithered onto a canvas above it. On hover (or tap) the whole
-// image resolves through a colour mosaic tier by tier, then the canvas clears to show the real photo.
+// Retro headshot — the photo is DOS-dithered onto a canvas above it. On hover the whole image
+// resolves through a colour mosaic tier by tier, then the canvas clears to show the real photo.
+// Clicking (or tapping, or Enter/Space) cycles the site's accent colour through the mosaic.
 // Each theme has its own photo; on the recoloured ones a cutout mask marks the backdrop.
 (function () {
   const wrap = document.querySelector('.hero-photo-wrap');
@@ -724,6 +725,7 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
   const CELL = 4;                 // on-screen size of one dither pixel, in CSS px
   const TIER_MS = 250;            // time per mosaic tier
   const REVERSE_MS = 80;          // time per tier when the reveal steps back down
+  const CYCLE_MS = 70;            // time per tier when a click changes the colour
   const TIER_BLOCKS = [4, 2, 1];  // mosaic block size in cells (16px, 8px, 4px), then the real photo
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
   const INK = [14, 14, 14], GRAY = [154, 154, 154], PAPER = [245, 243, 239], BLUE = [31, 59, 214];
@@ -746,6 +748,9 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
   // Reveal stage: 0 = dither, 1..TIER_BLOCKS.length = mosaic tiers, TIER_BLOCKS.length + 1 = real photo
   const PHOTO_STAGE = TIER_BLOCKS.length + 1;
   let stage = 0, stageTimer = 0;
+  // Colour cycle: `rebuilt` runs once the next theme's photo has been redrawn
+  const ORDER = ['blue', 'green', 'red', 'yellow'];
+  let cycling = false, hovering = false, rebuilt = null;
 
   const isBlue = (r, g, b) => b - (r + g) / 2 > 70;
   const threshold = (x, y) => (BAYER[(y % 4) * 4 + (x % 4)] + 0.5) / 16;
@@ -754,8 +759,7 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
   const mask = new Image();
   let maskLoaded = null;
   // Blue keeps its original colour test; the recoloured photos need the mask, loaded only then
-  const ready = () => {
-    if (theme === 'blue') return Promise.resolve();
+  const loadMask = () => {
     if (!maskLoaded) {
       maskLoaded = new Promise(resolve => {
         mask.onload = mask.onerror = resolve;
@@ -764,6 +768,7 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
     }
     return maskLoaded;
   };
+  const ready = () => (theme === 'blue' ? Promise.resolve() : loadMask());
 
   function objectPosition() {
     return getComputedStyle(img).objectPosition.split(' ')
@@ -948,6 +953,71 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
       build();
       render();
       maybeStart();
+      afterRebuild();
+    });
+  }
+
+  function afterRebuild() {
+    const done = rebuilt;
+    rebuilt = null;
+    if (done) done();
+  }
+
+  // The next colour's photo (and the mask it needs), fetched ahead so a click never waits on it
+  const preloaded = {};
+  function preload() {
+    const next = ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length];
+    if (!preloaded[next]) {
+      preloaded[next] = new Image();
+      preloaded[next].src = themePhoto(next);
+    }
+    if (next !== 'blue') loadMask();
+  }
+
+  // Walk one stage per CYCLE_MS toward `target`, now or after the first interval, then call `done`
+  function walk(target, now, done) {
+    clearInterval(stageTimer);
+    const tick = () => {
+      if (stage !== target) stage += target > stage ? 1 : -1;
+      render();
+      if (stage !== target) return;
+      clearInterval(stageTimer);
+      done();
+    };
+    stageTimer = setInterval(tick, CYCLE_MS);
+    if (now) tick();
+  }
+
+  // Step down to the 16px tier, switch the whole site's theme there, then resolve back up to the
+  // real photo in the new colour. Clicks during a cycle are ignored.
+  function cycle() {
+    if (cycling) return;
+    const next = ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length];
+    const switchTo = () => {
+      setTheme(next);
+      announcer.textContent = `Accent color: ${next}`;
+    };
+    if (reduceMotion.matches) {
+      clearInterval(stageTimer);
+      stage = PHOTO_STAGE;
+      render();
+      switchTo();
+      return;
+    }
+    cycling = true;
+    preload();
+    waiting(true);
+    walk(1, true, () => {
+      stageTimer = setTimeout(() => {
+        rebuilt = () => walk(PHOTO_STAGE, false, () => {
+          cycling = false;
+          waiting(false);
+          preload();
+          // Pointer or keyboard focus left during the cycle: settle back to the dither like a hover would
+          if (fine && !hovering && !wrap.matches(':focus-visible')) stepStage(0, REVERSE_MS);
+        });
+        switchTo();
+      }, CYCLE_MS);
     });
   }
 
@@ -962,29 +1032,50 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
   io.observe(wrap);
 
   img.addEventListener('load', onLoad);
-  img.addEventListener('error', () => canvas.remove()); // fall back to the plain <img>
+  img.addEventListener('error', () => { canvas.remove(); afterRebuild(); }); // fall back to the plain <img>
   if (img.complete && img.naturalWidth) onLoad();
 
-  // COLOR in the terminal: swap to that theme's photo; its load event rebuilds the dither and mosaics
+  // The headshot is a button that changes the colour, announced politely
+  const announcer = document.createElement('p');
+  announcer.className = 'visually-hidden';
+  announcer.setAttribute('aria-live', 'polite');
+  document.body.append(announcer);
+  const label = () => wrap.setAttribute('aria-label', `Change accent color (current: ${theme})`);
+  wrap.setAttribute('role', 'button');
+  wrap.tabIndex = 0;
+  label();
+
+  // Any theme switch (a click here or COLOR in the terminal): swap to that theme's photo; its load
+  // event rebuilds the dither and mosaics
   document.addEventListener('retro:theme', e => {
     theme = e.detail;
     accent = hexRgb(THEMES[theme]);
     img.src = themePhoto(theme);
+    label();
+  });
+
+  wrap.addEventListener('pointerenter', preload);
+  wrap.addEventListener('focus', preload);
+  wrap.addEventListener('click', cycle);
+  wrap.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    if (!e.repeat) cycle();
   });
 
   if (fine) {
     wrap.addEventListener('pointerenter', e => {
-      if (e.pointerType !== 'touch') stepStage(PHOTO_STAGE, TIER_MS);
+      if (e.pointerType === 'touch') return;
+      hovering = true;
+      if (!cycling) stepStage(PHOTO_STAGE, TIER_MS);
     });
     wrap.addEventListener('pointerleave', e => {
-      if (e.pointerType !== 'touch') stepStage(0, REVERSE_MS);
+      if (e.pointerType === 'touch') return;
+      hovering = false;
+      if (!cycling) stepStage(0, REVERSE_MS);
     });
-  } else {
-    // Touch: tap runs the tiers forward, tap again runs them back
-    let open = false;
-    wrap.addEventListener('click', () => {
-      open = !open;
-      stepStage(open ? PHOTO_STAGE : 0, open ? TIER_MS : REVERSE_MS);
+    wrap.addEventListener('blur', () => {
+      if (!hovering && !cycling) stepStage(0, REVERSE_MS);
     });
   }
 })();
