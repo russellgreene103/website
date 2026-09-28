@@ -1614,7 +1614,7 @@ const retroTerminal = (function () {
       'Some commands are not listed here...'),
     dir,
     open: openItem,
-    whoami: () => print('RUSSELL GREENE', 'Executive Producer @ BUCK // NYC', 'Architecting complex productions for global brands.', 'Off the clock: science, video games, and little worlds like this one.'),
+    whoami: () => print('RUSSELL GREENE', 'Executive Producer @ BUCK // NYC', 'Leading the teams that turn ambitious creative into work that ships.', 'Off the clock: science, video games, and programming.'),
     contact: () => {
       const contact = document.getElementById('contact');
       if (!contact) { location.href = '/#contact'; return; }
