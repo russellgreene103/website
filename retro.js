@@ -1194,116 +1194,78 @@ const retroTerminal = (function () {
   });
 })();
 
-// DOS section labels, in two variants chosen with ?labels=prompt (default) or ?labels=titlebar.
-// prompt: a command types out, then its one-line result appears. titlebar: an inverted DOS title
-// bar draws in, then its text types. Screen readers (and no-JS visitors) get the plain label text.
+// DOS section labels: each label becomes a command line (C:\> DIR WORK) that types itself out the
+// first time it scrolls into view. Screen readers (and no-JS visitors) get the plain label text.
 (function () {
   const labels = [...document.querySelectorAll('.section-label')];
   if (!labels.length) return;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const variant = new URLSearchParams(location.search).get('labels') === 'titlebar' ? 'titlebar' : 'prompt';
-  const CHAR_MS = 40, OPEN_MS = 120, CURSOR_LINGER_MS = 600;
-
-  // Counts come from the label's own section
-  const count = (label, sel) => (label.closest('section, .projects-section') || document).querySelectorAll(sel).length;
-  const files = (label, sel) => `${count(label, sel)} FILE(S)`;
-  const LABELS = {
-    'core expertise': { cmd: 'TYPE EXPERTISE.TXT', result: l => `${count(l, '.expertise-item')} SKILLS`, title: 'Core Expertise' },
-    'selected work': { cmd: 'DIR WORK', result: l => files(l, '.work-item'), title: 'Selected Work' },
-    'selected partners': { cmd: 'DIR PARTNERS', result: l => files(l, '.partner-name'), title: 'Partners' },
-    'get in touch': { cmd: 'MAIL RUSSELL', result: () => 'READY', title: 'Get in Touch' },
-    'all projects': { cmd: 'DIR VIBE', result: l => files(l, '.project-item'), title: 'All Projects' },
+  const CHAR_MS = 40, CURSOR_LINGER_MS = 600;
+  const COMMANDS = {
+    'core expertise': 'TYPE EXPERTISE.TXT',
+    'selected work': 'DIR WORK',
+    'selected partners': 'DIR PARTNERS',
+    'get in touch': 'MAIL RUSSELL',
+    'all projects': 'DIR VIBE',
   };
 
   const el = (tag, className, text) => {
     const node = document.createElement(tag);
-    if (className) node.className = className;
+    node.className = className;
     if (text) node.textContent = text;
     return node;
   };
-  const cursor = () => el('b', 'block-cursor');
 
   function build(label) {
     // Line breaks in the markup (Core<br>Expertise) count as spaces
     const plain = [...label.childNodes].map(n => n.nodeName === 'BR' ? ' ' : n.textContent).join('').replace(/\s+/g, ' ').trim();
-    const spec = LABELS[plain.toLowerCase()] || { cmd: plain.toUpperCase(), result: () => 'OK', title: plain };
-    const visual = el('span', `dos-label dos-label-${variant}`);
+    const visual = el('span', 'dos-label');
     visual.setAttribute('aria-hidden', 'true');
-    let typeTarget, typeText, afterTyping = () => {};
-
-    if (variant === 'prompt') {
-      const line = el('span', 'dl-line');
-      const cmd = el('span', 'dl-cmd');
-      const result = el('span', 'dl-result', spec.result(label));
-      line.append(el('span', 'dl-prompt', 'C:\\>'), ' ', cmd);
-      visual.append(line, result);
-      typeTarget = cmd;
-      typeText = spec.cmd;
-      afterTyping = () => visual.classList.add('is-done');
-    } else {
-      // A hidden full-width copy sizes the bar, so it doesn't grow while its text types
-      const text = el('span', 'dl-text');
-      const ghost = el('span', 'dl-ghost', spec.title);
-      ghost.append(cursor());
-      const typed = el('span', 'dl-typed');
-      text.append(ghost, typed);
-      visual.append(el('span', 'dl-close', '[■]'), text);
-      typeTarget = typed;
-      typeText = spec.title;
-    }
-
-    const sr = el('span', 'dl-sr', plain);
+    const cmd = el('span', 'dl-cmd');
+    visual.append(el('span', 'dl-prompt', 'C:\\>'), ' ', cmd);
     label.textContent = '';
-    label.append(sr, visual);
+    label.append(el('span', 'dl-sr', plain), visual);
     label.classList.add('has-dos-label');
-    return { visual, typeTarget, typeText, afterTyping };
+    return { visual, cmd, text: COMMANDS[plain.toLowerCase()] || plain.toUpperCase() };
   }
 
-  function type({ visual, typeTarget, typeText, afterTyping }) {
-    const c = cursor();
+  function type({ visual, cmd, text }) {
+    visual.classList.add('is-shown');
+    const cursor = el('b', 'block-cursor');
     let i = 0;
-    typeTarget.append(c);
+    cmd.append(cursor);
     const timer = setInterval(() => {
       i++;
-      typeTarget.textContent = typeText.slice(0, i);
-      typeTarget.append(c);
-      if (i < typeText.length) return;
+      cmd.textContent = text.slice(0, i);
+      cmd.append(cursor);
+      if (i < text.length) return;
       clearInterval(timer);
-      afterTyping();
-      setTimeout(() => c.remove(), CURSOR_LINGER_MS);
+      setTimeout(() => cursor.remove(), CURSOR_LINGER_MS);
     }, CHAR_MS);
   }
 
-  function reveal(parts) {
-    parts.visual.classList.add('is-shown');
-    if (variant === 'titlebar') {
-      parts.visual.classList.add('is-opening');
-      setTimeout(() => type(parts), OPEN_MS);
-    } else type(parts);
-  }
+  const parts = labels.map(build);
 
-  const built = new Map(labels.map(label => [label, build(label)]));
-
-  // Reduced motion (or no IntersectionObserver): everything drawn at once
+  // Reduced motion (or no IntersectionObserver): every command drawn at once
   if (reduceMotion.matches || !('IntersectionObserver' in window)) {
-    for (const parts of built.values()) {
-      parts.typeTarget.textContent = parts.typeText;
-      parts.visual.classList.add('is-shown', 'is-done');
+    for (const p of parts) {
+      p.cmd.textContent = p.text;
+      p.visual.classList.add('is-shown');
     }
     return;
   }
 
-  // Watch the DOS copy itself: the label element can stretch to its whole grid row (taller than
-  // the viewport), which would never reach the threshold
-  const byVisual = new Map([...built.values()].map(parts => [parts.visual, parts]));
+  // Watch the command line itself: the label element can stretch to its whole grid row (taller
+  // than the viewport), which would never reach the threshold
+  const byVisual = new Map(parts.map(p => [p.visual, p]));
   const io = new IntersectionObserver(entries => {
     for (const entry of entries) {
       if (!entry.isIntersecting) continue;
       io.unobserve(entry.target);
-      reveal(byVisual.get(entry.target));
+      type(byVisual.get(entry.target));
     }
   }, { threshold: 0.6 });
-  byVisual.forEach((parts, visual) => io.observe(visual));
+  byVisual.forEach((p, visual) => io.observe(visual));
 })();
 
 // Partner sequence: a DOS menu selection bar steps through the names once, the first time they're seen
