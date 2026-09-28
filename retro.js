@@ -1690,15 +1690,16 @@ const retroTerminal = (function () {
   });
 })();
 
-// Name glitch: every 5–12 seconds one or two letters of the hero heading briefly pixelate (6px
-// blocks, then 3px, then the real letter). Each glitch is a canvas laid over the letter, measured
-// with a Range, so the heading's text, layout and reading order are never touched.
+// Name glitch: every 2–5 seconds two or three letters (sometimes one) of the hero heading briefly
+// pixelate (6px blocks, then 4px, then 3px, then the real letter). Each glitch is a canvas laid over
+// the letter, measured with a Range, so the heading's text, layout and reading order are never touched.
 (function () {
   const heading = document.querySelector('.hero h1');
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   if (!heading || reduceMotion.matches || !('IntersectionObserver' in window)) return;
-  const STEP_MS = 80, BLOCKS = [6, 3];
-  const MIN_WAIT = 5000, MAX_WAIT = 12000;
+  const STEP_MS = 110, BLOCKS = [6, 4, 3];
+  const MIN_WAIT = 2000, MAX_WAIT = 5000;
+  const MULTI_CHANCE = 0.4, TINT_CHANCE = 1 / 3;
   heading.classList.add('glitch-host');
 
   let onScreen = false, last = new Set();
@@ -1714,7 +1715,7 @@ const retroTerminal = (function () {
     return found;
   }
 
-  function glitchLetter({ node, i, ch }) {
+  function glitchLetter({ node, i, ch }, tinted) {
     // Measured fresh each time, so resizes and late font loads never leave it misaligned
     const range = document.createRange();
     range.setStart(node, i);
@@ -1750,7 +1751,7 @@ const retroTerminal = (function () {
     ctx.scale(dpr, dpr);
     const root = getComputedStyle(document.documentElement);
     const paper = root.getPropertyValue('--paper').trim() || '#f5f3ef';
-    const ink = Math.random() < 0.25 ? (root.getPropertyValue('--pixel').trim() || '#1f3bd6') : style.color;
+    const ink = tinted ? (root.getPropertyValue('--pixel').trim() || '#1f3bd6') : style.color;
 
     // One stage: blocks touching the glyph are papered over (hiding the real letter); the solid ones get ink
     function draw(block) {
@@ -1777,13 +1778,15 @@ const retroTerminal = (function () {
 
   function glitch() {
     const all = letters();
-    // One letter usually, sometimes two; never one that glitched last time
+    // Never a letter that glitched last time
     const pool = all.filter(l => !last.has(`${l.node.textContent}:${l.i}`));
-    const count = Math.random() < 0.3 ? 2 : 1;
+    // About 40% of glitches hit two or three letters at once; about 1 in 3 is tinted in the theme colour
+    const count = Math.random() < MULTI_CHANCE ? 2 + Math.floor(Math.random() * 2) : 1;
+    const tinted = Math.random() < TINT_CHANCE;
     const picked = [];
     while (picked.length < count && pool.length) picked.push(...pool.splice(Math.floor(Math.random() * pool.length), 1));
     last = new Set(picked.map(l => `${l.node.textContent}:${l.i}`));
-    picked.forEach(glitchLetter);
+    picked.forEach(l => glitchLetter(l, tinted));
   }
 
   function schedule() {
