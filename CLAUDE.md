@@ -30,11 +30,11 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 - **Headshot:** the photo is Bayer-dithered onto a canvas, with a dial-up band reveal on first view. Hover resolves through mosaic tiers (16px, 8px, 4px, then the real photo) and steps back down on leave.
 - **Click-to-cycle colours:** click, tap, or Enter/Space on the headshot (`role="button"`) goes blue → green → red → yellow. It steps down to 16px, switches the site theme there, then resolves up in the new photo. The next photo is preloaded on the first pointer enter or focus. Changes are announced through an aria-live region.
 - **Pixel cursor** (fine pointers only): the arrow, the hand (`html.cursor-link`, over links, buttons and `[role=button]`), and the hourglass (`html.cursor-wait`, which wins over the hand). Hidden over form fields.
-- **Click effects:** a random pixel burst on mousedown, never the same effect twice in a row.
-- **Work preview cards:** hovering a work row shows its image in a DOS frame that resolves through mosaic tiers. DOS preview windows serve the other row types.
-- **Terminal:** press backtick or click the prompt clock. Commands: HELP, DIR, OPEN, WHOAMI, CONTACT, LINKEDIN, VIBE, HOME, TIME, VER, COLOR (lists themes, or `COLOR RED` switches until reload), CLS, EXIT, WIN, FORMAT, and the secret `ROCKS` / `ROCKS.EXE`, which lazy-loads `rocks.js`.
+- **Click effects:** a random pixel burst on mousedown (or a touch tap that doesn't scroll), never the same effect twice in a row. `makeClickEffects()` is shared by both.
+- **Work preview cards:** hovering a work row shows its image in a DOS frame that resolves through mosaic tiers (`drawMosaic()`). DOS preview windows serve the other row types. On touch, each row gets a lazy-loaded 64px thumbnail instead, which resolves through the same tiers the first time it scrolls into view, and tapping anywhere on a work or /vibe row opens its link.
+- **Terminal:** press backtick or click the prompt clock. On touch, a row of command keys (HELP, DIR, WHOAMI, COLOR, TIME) sits above the prompt at the bottom of the window, the overlay tracks `visualViewport` to stay above the keyboard, and the page behind is pinned (`html.term-locked`). Commands: HELP, DIR, OPEN, WHOAMI, CONTACT, LINKEDIN, VIBE, HOME, TIME, VER, COLOR (lists themes, or `COLOR RED` switches until reload), CLS, EXIT, WIN, FORMAT, and the secret `ROCKS` / `ROCKS.EXE`, which lazy-loads `rocks.js`. On touch, ROCKS scales to fit (not whole numbers), with thumb buttons under the screen upright or beside it sideways, plus EXIT and SND.
 - **DOS section labels** type themselves out as commands (`C:\> DIR WORK`); the **partner list** runs a menu selection bar once.
-- **Expertise panel:** resting on, focusing, tapping or clicking (to pin) a skill types its description and related work into a DOS panel.
+- **Expertise panel:** resting on, focusing, tapping or clicking (to pin) a skill types its description and related work into a DOS panel. On touch screens and at 660px or narrower (`.xp-inline`), the same panel opens inline under the tapped skill instead.
 - **Name glitch:** every 2–5s, a few letters of the hero `<h1>` pixelate through canvas overlays. The heading text itself is never touched.
 - **Work list:** shows six rows, and a DOS button lists the rest.
 
@@ -44,6 +44,7 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 - Animation is stepped (`steps()`, timer-driven tiers), never smooth easing.
 - Colour comes from tokens only: `--pixel` (accent fill), `--on-pixel` (text on that fill), `--pixel-text` (accent text on `--paper`). Yellow uses a darker `--pixel-text` and ink `--on-pixel` for contrast.
 - Text contrast is at least 4.5:1 in every theme.
+- Touch-only styles and behaviour sit behind `(hover: none) and (pointer: coarse)` (the `TOUCH` constant in retro.js); small-screen layout sits behind `max-width: 660px`. Desktop must stay pixel-identical when changing either.
 - Honour `prefers-reduced-motion` everywhere: skip steps and animations and apply the final state instantly.
 - Screen reader text is preserved: effects are `aria-hidden` overlays or visually-hidden copies, and the real text stays intact. Everything works without JS (it stays blue and static).
 
@@ -53,6 +54,8 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 - Use headless Chrome through `puppeteer-core`, pointed at `/Applications/Google Chrome.app`. Install it in a scratch dir, not the repo.
 - `requestAnimationFrame` and CSS animations often don't advance in headless mode, so drive timers or seek animations directly. `setInterval`/`setTimeout`-based tiers do run.
 - **Never** launch Chrome with a persistent `--user-data-dir`, because it hangs.
+- For touch tests, launch with `--window-size` at least as big as the emulated phone (e.g. `1000,1000`); taps outside the real window hang. A tap on a work row opens a new tab, which stalls later input on the original page.
+- Puppeteer element screenshots fire `matchMedia` change events without the result changing; listeners must compare against the current mode.
 - Useful checks: read the `.hero-dither` canvas pixels (opaque vs cleared, uniform 4×4 blocks = the 16px tier), the `html` classes `cursor-wait` and `cursor-link`, and `html[data-theme]`. Emulate touch (`hasTouch`, `isMobile`) and `prefers-reduced-motion` for those paths.
 
 ## Deploy verification

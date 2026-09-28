@@ -53,6 +53,24 @@ window.RocksGame = (function () {
     fire: ['Space'], hyper: ['ArrowDown', 'KeyS'],
   };
 
+  // Touch button icons: C cells in the button's text colour, 3px each
+  const ICONS = {
+    left: ['....CCC..', '..CC...C.', '.C......C', 'CCC.....C', '.C......C', '........C', '.......C.', '..CCCCC..'],
+    thrust: ['....C....', '...C.C...', '...C.C...', '..C...C..', '..C...C..', '.CCCCCCC.', '...C.C...', '....C....'],
+    fire: ['....C....', '....C....', '.........', 'CC..C..CC', '.........', '....C....', '....C....'],
+    hyper: ['CCC...CCC', 'C.......C', 'C..CCC..C', '...C.C...', 'C..CCC..C', 'C.......C', 'CCC...CCC'],
+  };
+  ICONS.right = ICONS.left.map(row => [...row].reverse().join(''));
+
+  function iconSvg(rows, cell = 3) {
+    let d = '';
+    rows.forEach((row, y) => [...row].forEach((c, x) => {
+      if (c === 'C') d += `M${x * cell} ${y * cell}h${cell}v${cell}h-${cell}z`;
+    }));
+    const w = rows[0].length * cell, h = rows.length * cell;
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="${d}"/></svg>`;
+  }
+
   function loadScores() {
     try {
       const list = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
@@ -197,7 +215,9 @@ window.RocksGame = (function () {
       Object.assign(world, { state: 'playing', score: 0, lives: 3, wave: 0, nextLife: 10000, rocks: [], bullets: [], particles: [], waveTimer: 90 });
       spawnShip();
       world.wave = 0;
-      announce('Game started. Arrow keys or W A S D to turn and thrust, Space to fire, Down or S for hyperspace, P to pause, M for sound, Escape to quit.');
+      announce(touch
+        ? 'Game started. Left buttons turn and thrust; right buttons fire and jump to hyperspace.'
+        : 'Game started. Arrow keys or W A S D to turn and thrust, Space to fire, Down or S for hyperspace, P to pause, M for sound, Escape to quit.');
     }
 
     function burst(x, y, count, colors, speed = 1.6) {
@@ -398,11 +418,11 @@ window.RocksGame = (function () {
         // Chunky logo: a dark drop shadow, then the letters
         text('ROCKS', W / 2 + 3, 25, P.logoShadow, 7, 'center', false);
         text('ROCKS', W / 2, 22, P.hi, 7, 'center', false);
-        if (blink()) text('PRESS SPACE TO START', W / 2, 70, P.text, 1, 'center');
+        if (blink()) text(touch ? 'TAP FIRE TO START' : 'PRESS SPACE TO START', W / 2, 70, P.text, 1, 'center');
         drawScores(88);
-        text('ARROWS OR WASD: TURN/THRUST  SPACE: FIRE', W / 2, 150, P.accent, 1, 'center');
-        text('DOWN: HYPERSPACE  P: PAUSE  ESC: QUIT', W / 2, 160, P.accent, 1, 'center');
-        text(`M: SOUND ${world.sound ? 'ON' : 'OFF'}`, W / 2, 176, P.text, 1, 'center');
+        text(touch ? 'LEFT: TURN AND THRUST' : 'ARROWS OR WASD: TURN/THRUST  SPACE: FIRE', W / 2, 150, P.accent, 1, 'center');
+        text(touch ? 'RIGHT: FIRE AND HYPERSPACE' : 'DOWN: HYPERSPACE  P: PAUSE  ESC: QUIT', W / 2, 160, P.accent, 1, 'center');
+        text(`${touch ? 'SND' : 'M'}: SOUND ${world.sound ? 'ON' : 'OFF'}`, W / 2, 176, P.text, 1, 'center');
         text('(C) 2026 RUSSELL-DOS', W / 2, 190, P.dim, 1, 'center');
       }
 
@@ -420,20 +440,20 @@ window.RocksGame = (function () {
           text(ch, x, 96, i === world.initialsAt ? P.hi : P.text, 4);
           if (i === world.initialsAt && blink(20)) rect(x, 118, 11, 2, P.hi);
         });
-        text('TYPE OR UP/DOWN, ENTER TO CONFIRM', W / 2, 140, P.accent, 1, 'center');
+        text(touch ? 'THRUST/HYPER: LETTER  FIRE: NEXT' : 'TYPE OR UP/DOWN, ENTER TO CONFIRM', W / 2, 140, P.accent, 1, 'center');
       }
 
       if (world.state === 'scores') {
         text('GAME OVER', W / 2, 24, P.text, 3, 'center');
         text(`SCORE ${world.lastScore}`, W / 2, 50, P.hi, 1, 'center');
         drawScores(72);
-        if (blink()) text('PRESS SPACE TO PLAY AGAIN', W / 2, 136, P.text, 1, 'center');
+        if (blink()) text(touch ? 'TAP FIRE TO PLAY AGAIN' : 'PRESS SPACE TO PLAY AGAIN', W / 2, 136, P.text, 1, 'center');
       }
 
       if (world.paused) {
         rect(W / 2 - 50, H / 2 - 14, 100, 28, C.black);
         text('PAUSED', W / 2, H / 2 - 9, C.white, 2, 'center');
-        text('P TO RESUME', W / 2, H / 2 + 5, C.lgray, 1, 'center');
+        text(touch ? 'TAP A BUTTON' : 'P TO RESUME', W / 2, H / 2 + 5, C.lgray, 1, 'center');
       }
 
       ctx.putImageData(image, 0, 0);
@@ -483,6 +503,7 @@ window.RocksGame = (function () {
     function toggleSound() {
       world.sound = !world.sound;
       if (world.sound && sound.ctx()) audio.resume();
+      if (soundButton) soundButton.setAttribute('aria-pressed', String(world.sound));
     }
 
     function setPaused(on) {
@@ -534,22 +555,31 @@ window.RocksGame = (function () {
     window.addEventListener('blur', onBlur);
     document.addEventListener('visibilitychange', onVisibility);
 
-    // Touch: on-screen pixel buttons, each tracking its own touches so several can be held at once
+    // Touch: pixel buttons laid out for thumbs, turn and thrust on the left, fire and hyperspace on the
+    // right, each tracking its own touches so several can be held at once. The smaller EXIT and SND
+    // sit furthest from the thumbs. Upright the groups go under the screen; sideways they flank it.
+    let soundButton = null;
     if (touch) {
+      host.classList.add('is-touch');
+      const note = document.createElement('p');
+      note.className = 'rocks-rotate';
+      note.textContent = 'Rotate for a bigger screen';
       const pad = document.createElement('div');
       pad.className = 'rocks-pad';
-      const BUTTONS = [['ArrowLeft', 'L', 'Rotate left'], ['ArrowRight', 'R', 'Rotate right'], ['ArrowUp', 'THR', 'Thrust'], ['Space', 'FIRE', 'Fire'], ['ArrowDown', 'HYP', 'Hyperspace']];
-      for (const [code, label, name] of BUTTONS) {
+
+      const hold = (code, icon, label, name) => {
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = 'rocks-button';
-        b.textContent = label;
+        b.className = `rocks-button rocks-key-${icon}`;
+        b.innerHTML = `${iconSvg(ICONS[icon])}<span aria-hidden="true">${label}</span>`;
         b.setAttribute('aria-label', name);
         const release = () => { down.delete(code); b.classList.remove('is-down'); };
         b.addEventListener('pointerdown', e => {
           e.preventDefault();
           try { b.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
           b.classList.add('is-down');
+          // Paused (the app went to the background): any button picks the game back up
+          if (world.paused) { setPaused(false); return; }
           // In initials entry the pad doubles as letter controls: thrust/hyper change, fire confirms
           if (world.state === 'entry') {
             const map = { ArrowUp: 'ArrowUp', ArrowDown: 'ArrowDown', ArrowLeft: 'ArrowLeft', ArrowRight: 'ArrowRight', Space: world.initialsAt < 2 ? 'ArrowRight' : 'Enter' };
@@ -562,9 +592,49 @@ window.RocksGame = (function () {
         b.addEventListener('pointerup', release);
         b.addEventListener('pointercancel', release);
         b.addEventListener('lostpointercapture', release);
-        pad.append(b);
-      }
-      host.append(pad);
+        return b;
+      };
+      // EXIT and SND act on a full tap (click), which also counts as the gesture audio needs
+      const tapButton = (label, name, onTap) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'rocks-button rocks-aux';
+        b.textContent = label;
+        b.setAttribute('aria-label', name);
+        b.addEventListener('pointerdown', e => e.preventDefault());
+        b.addEventListener('click', e => {
+          e.stopPropagation(); // the terminal screen would take the tap as "focus the prompt"
+          onTap();
+        });
+        return b;
+      };
+      const group = (side, aux, keys) => {
+        const g = document.createElement('div');
+        g.className = `rocks-group rocks-${side}`;
+        const k = document.createElement('div');
+        k.className = 'rocks-keys';
+        k.append(...keys);
+        g.append(aux, k);
+        return g;
+      };
+
+      soundButton = tapButton('SND OFF', 'Sound', () => {
+        toggleSound();
+        soundButton.textContent = `SND ${world.sound ? 'ON' : 'OFF'}`;
+      });
+      soundButton.setAttribute('aria-pressed', 'false');
+      pad.append(
+        group('left', tapButton('EXIT', 'Exit to the prompt', quit), [
+          hold('ArrowLeft', 'left', 'Left', 'Rotate left'),
+          hold('ArrowRight', 'right', 'Right', 'Rotate right'),
+          hold('ArrowUp', 'thrust', 'Thrust', 'Thrust'),
+        ]),
+        group('right', soundButton, [
+          hold('ArrowDown', 'hyper', 'Hyper', 'Hyperspace'),
+          hold('Space', 'fire', 'Fire', 'Fire'),
+        ]),
+      );
+      host.append(note, pad);
     }
 
     // ── Loop: fixed 60Hz updates, drawing on animation frames ──
@@ -602,6 +672,11 @@ window.RocksGame = (function () {
 
     return {
       update, render, stop, world,
+      // Touch screens refit the canvas when the phone turns
+      resize(s) {
+        canvas.style.width = `${Math.round(W * s)}px`;
+        canvas.style.height = `${Math.round(H * s)}px`;
+      },
       // Test hooks: feed keys straight into the input state
       press(code) { pressed.add(code); down.add(code); },
       release(code) { down.delete(code); },

@@ -543,6 +543,46 @@
       }
 
       footer { flex-direction: column; gap: 8px; text-align: center; }
+
+      /* The clock and the title each get their own line, rather than wrapping wherever they fall */
+      .hero-meta > span { display: block; margin-right: 0; }
+      .hero-meta > span + span { margin-top: 6px; }
+    }
+
+    /* Small screens and touch screens: small mono labels one size up, so they read without zooming */
+    @media (max-width: 660px), (hover: none) and (pointer: coarse) {
+      .section-label,
+      .work-client,
+      .work-link,
+      .contact-details .detail-label,
+      .form-row label,
+      footer .footer-left,
+      footer .footer-right { font-size: 11px; }
+    }
+
+    /* ── Touch ── */
+    @media (hover: none) and (pointer: coarse) {
+      /* Small links get a bigger invisible hit area; the layout doesn't move */
+      .nav-links a,
+      .work-link,
+      .contact-details a,
+      footer a { position: relative; -webkit-tap-highlight-color: transparent; }
+      .nav-links a::after,
+      .work-link::after,
+      .contact-details a::after,
+      footer a::after {
+        content: '';
+        position: absolute;
+        inset: -15px -8px;
+      }
+
+      /* The whole row opens the case study; it darkens while pressed instead of sticking on hover */
+      .work-item { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+      .work-item:hover { background: none; }
+      .work-item:active { background: rgba(14,14,14,0.05); }
+      .work-item:hover .work-link { color: var(--mid); border-bottom-color: transparent; }
+      .partner-name:hover { opacity: 0.22; }
+      .form-row input { min-height: 44px; }
     }
   </style>
   <link rel="stylesheet" href="/retro.css" />

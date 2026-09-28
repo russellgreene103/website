@@ -317,6 +317,34 @@
       .section-label { padding-top: 40px; }
       .project-item { margin: 0 -20px; padding-left: 20px; padding-right: 20px; }
       footer { flex-direction: column; gap: 8px; text-align: center; }
+
+      /* The gate fills the visible screen, not the one behind the browser's toolbars */
+      #gate { min-height: calc(100svh - 120px); padding: 48px 0; }
+      .project-url { overflow-wrap: anywhere; }
+    }
+
+    /* ── Touch ── */
+    @media (hover: none) and (pointer: coarse) {
+      /* Small links get a bigger invisible hit area; the layout doesn't move */
+      .nav-logo,
+      .nav-back,
+      .project-link,
+      .footer-right a { position: relative; -webkit-tap-highlight-color: transparent; }
+      .nav-logo::after,
+      .nav-back::after,
+      .project-link::after,
+      .footer-right a::after {
+        content: '';
+        position: absolute;
+        inset: -15px -8px;
+      }
+
+      /* The whole row opens the project; it darkens while pressed instead of sticking on hover */
+      .project-item { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+      .project-item:hover { background: none; }
+      .project-item:active { background: rgba(14,14,14,0.05); }
+      .project-item:hover .project-link { color: var(--mid); border-bottom-color: transparent; }
+      .gate-input-row input { min-height: 44px; }
     }
 
     .badge-local {
@@ -331,6 +359,20 @@
       vertical-align: middle;
       position: relative;
       top: -1px;
+    }
+
+    /* Small screens and touch screens: small mono labels one size up, so they read without zooming */
+    @media (max-width: 660px), (hover: none) and (pointer: coarse) {
+      .gate-label,
+      .gate-input-row label,
+      .gate-error,
+      .content-meta,
+      .section-label,
+      .project-url,
+      .project-link,
+      .footer-left,
+      .footer-right a { font-size: 11px; }
+      .badge-local { font-size: 10px; }
     }
   </style>
   <link rel="stylesheet" href="/retro.css" />
@@ -351,7 +393,7 @@
     <div class="gate-form">
       <div class="gate-input-row">
         <label for="password">Password</label>
-        <input type="password" id="password" placeholder="••••••••" autocomplete="off" />
+        <input type="password" id="password" placeholder="••••••••" autocomplete="off" enterkeyhint="go" />
       </div>
       <p class="gate-error" id="gate-error">Incorrect password</p>
       <button class="gate-submit dos-button" id="gate-btn"><span class="dos-button-icon" data-icon="enter" aria-hidden="true"></span><span class="dos-button-label">Enter</span><b class="block-cursor dos-button-cursor" aria-hidden="true"></b></button>

@@ -2,6 +2,9 @@
 
 const textOf = (el, sel) => el.querySelector(sel).textContent.trim();
 
+// Phones and tablets: taps instead of hover (desktop never matches this)
+const TOUCH = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+
 // Accent themes: the colours match the inline <head> script and retro.css
 const THEMES = { blue: '#1f3bd6', green: '#10633b', red: '#c52e13', yellow: '#d7a13f' };
 const currentTheme = () => (THEMES[document.documentElement.dataset.theme] ? document.documentElement.dataset.theme : 'blue');
@@ -81,6 +84,202 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
   const frames = PIXEL_ICONS[slot.dataset.icon];
   if (frames) slot.innerHTML = frames.map(f => gridSvg(f)).join('');
 });
+
+// One mosaic tier: the image cover-cropped into the canvas at one sample per block, blown back up
+function drawMosaic(canvas, img, block) {
+  const W = canvas.width, H = canvas.height;
+  const cols = Math.ceil(W / block), rows = Math.ceil(H / block);
+  const small = document.createElement('canvas');
+  small.width = cols;
+  small.height = rows;
+  const sctx = small.getContext('2d');
+  sctx.imageSmoothingQuality = 'high';
+  const scale = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+  const sw = W / scale, sh = H / scale;
+  sctx.drawImage(img, (img.naturalWidth - sw) / 2, (img.naturalHeight - sh) / 2, sw, sh, 0, 0, cols, rows);
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(small, 0, 0, cols * block, rows * block);
+}
+
+// Click effects: six stepped pixel effects on a 4px grid, one per click (or tap), never the same twice
+// in a row. Elements come from fixed pools, so the pool sizes cap what's on screen.
+function makeClickEffects() {
+  const INK = 'var(--ink)', BLUE = 'var(--pixel)';
+  const WORDS = ['+100', 'RAD', 'OK!', 'WOW', 'NICE'];
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const grid = v => Math.round(v / 4) * 4;
+  const easeOut = t => 1 - Math.pow(1 - t, 3);
+
+  function makePool(n, className) {
+    return Array.from({ length: n }, () => {
+      const el = document.createElement('div');
+      el.className = className;
+      el.setAttribute('aria-hidden', 'true');
+      document.body.append(el);
+      return el;
+    });
+  }
+  const fxBits = makePool(72, 'fx-bit');
+  const fxWords = makePool(3, 'fx-word');
+  let nextBitFx = 0, nextWord = 0, lastEffect = -1;
+
+  // n+1 hard-cut keyframes; each step lasts longer than the one before, so motion starts fast and settles
+  function stepped(n, at) {
+    return Array.from({ length: n + 1 }, (_, i) => {
+      const t = i / n;
+      const f = at(t);
+      return {
+        offset: f.offset ?? Math.pow(t, 1.35),
+        easing: 'steps(1, end)',
+        transform: `translate(${grid(f.x || 0)}px, ${grid(f.y || 0)}px) scale(${f.s ?? 1})`,
+        opacity: f.o ?? 1,
+      };
+    });
+  }
+
+  function spawn(x, y, { w = 4, h = w, color = INK, frames, duration }) {
+    const el = fxBits[nextBitFx];
+    nextBitFx = (nextBitFx + 1) % fxBits.length;
+    el.getAnimations().forEach(a => a.cancel());
+    el.style.width = `${w}px`;
+    el.style.height = `${h}px`;
+    el.style.background = color;
+    el.style.translate = `${grid(x - w / 2)}px ${grid(y - h / 2)}px`;
+    el.animate(frames, { duration, fill: 'forwards' });
+  }
+
+  const mixed = blueShare => (Math.random() < blueShare ? BLUE : INK);
+
+  // a. Burst: 16 pixels out in every direction, arcing down with gravity as they fade
+  function burstFx(x, y) {
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * Math.PI * 2 + rand(-0.2, 0.2);
+      const dist = rand(20, 56), drop = rand(12, 32);
+      spawn(x, y, {
+        w: Math.random() < 0.3 ? 8 : 4, color: mixed(0.35), duration: rand(420, 640),
+        frames: stepped(6, t => ({
+          x: Math.cos(angle) * dist * easeOut(t),
+          y: Math.sin(angle) * dist * easeOut(t) + drop * t * t,
+          s: t > 0.65 ? 0.5 : 1,
+          o: t < 1 ? 1 : 0,
+        })),
+      });
+    }
+  }
+
+  // b. Shockwave: four rings, each wider, thinner and bluer, shown one after another
+  function shockwaveFx(x, y) {
+    const RINGS = [[8, 12], [16, 12], [24, 10], [32, 8]]; // radius, pixel count
+    const WINDOWS = [0, 0.14, 0.32, 0.58, 1];              // uneven: early rings flash by
+    const spin = rand(0, Math.PI), duration = rand(360, 440);
+    RINGS.forEach(([radius, count], k) => {
+      for (let i = 0; i < count; i++) {
+        const angle = spin + (i / count) * Math.PI * 2;
+        const start = WINDOWS[k], end = WINDOWS[k + 1];
+        const frames = [];
+        if (start > 0) frames.push({ offset: 0, opacity: 0, easing: 'steps(1, end)' });
+        frames.push({ offset: start, opacity: 1, easing: 'steps(1, end)' });
+        frames.push({ offset: end, opacity: 0, easing: 'steps(1, end)' });
+        if (end < 1) frames.push({ offset: 1, opacity: 0 });
+        spawn(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius, {
+          color: k < 2 ? INK : BLUE, duration, frames,
+        });
+      }
+    });
+  }
+
+  // c. Fountain: a spray shoots up and falls back down past the click point
+  function fountainFx(x, y) {
+    const count = 12 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < count; i++) {
+      const vx = rand(-44, 44), rise = rand(36, 72), fall = rand(16, 40);
+      // y(t) = -v·t + (g/2)·t², peaking at -rise and ending at +fall
+      const v = 2 * (rise + Math.sqrt(rise * rise + rise * fall)), g = 2 * (fall + v);
+      spawn(x, y, {
+        w: Math.random() < 0.25 ? 8 : 4, color: mixed(0.4), duration: rand(620, 820),
+        frames: stepped(8, t => ({ offset: t, x: vx * t, y: -v * t + (g / 2) * t * t, o: t < 1 ? 1 : 0 })),
+      });
+    }
+  }
+
+  // d. Firework: a rocket climbs, hangs for a beat, then pops into a small burst
+  function fireworkFx(x, y) {
+    const height = grid(rand(52, 68)), duration = rand(880, 1000);
+    const LAUNCH_END = 0.36, POP = 0.5;
+    const rocket = [0, 1, 2, 3, 4].map(i => ({
+      offset: LAUNCH_END * Math.pow(i / 4, 1.3), easing: 'steps(1, end)',
+      transform: `translate(0px, ${grid(-height * easeOut(i / 4))}px)`, opacity: 1,
+    }));
+    rocket.push({ offset: POP, transform: `translate(0px, ${-height}px)`, opacity: 0, easing: 'steps(1, end)' });
+    rocket.push({ offset: 1, transform: `translate(0px, ${-height}px)`, opacity: 0 });
+    spawn(x, y, { color: INK, duration, frames: rocket });
+
+    const sparks = 9 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < sparks; i++) {
+      const angle = (i / sparks) * Math.PI * 2 + rand(-0.25, 0.25);
+      const dist = rand(12, 28);
+      const frames = [{ offset: 0, opacity: 0, easing: 'steps(1, end)' }];
+      for (let k = 0; k <= 5; k++) {
+        const t = k / 5;
+        frames.push({
+          offset: POP + (1 - POP) * Math.pow(t, 1.35), easing: 'steps(1, end)',
+          transform: `translate(${grid(Math.cos(angle) * dist * easeOut(t))}px, ${grid(Math.sin(angle) * dist * easeOut(t) + 16 * t * t)}px)`,
+          opacity: k < 5 ? 1 : 0,
+        });
+      }
+      spawn(x, y - height, { color: mixed(0.6), duration, frames });
+    }
+  }
+
+  // e. Score popup: a word jumps up in steps, then blinks out
+  function scoreFx(x, y) {
+    const el = fxWords[nextWord];
+    nextWord = (nextWord + 1) % fxWords.length;
+    el.getAnimations().forEach(a => a.cancel());
+    el.textContent = WORDS[Math.floor(Math.random() * WORDS.length)];
+    el.style.translate = `${grid(x + rand(-8, 8))}px ${grid(y) - 12}px`;
+    const rise = [0, 12, 20, 28, 32];
+    const frames = rise.map((dy, i) => ({
+      offset: [0, 0.08, 0.2, 0.34, 0.5][i], easing: 'steps(1, end)',
+      transform: `translate(-50%, ${-dy}px)`, opacity: 1,
+    }));
+    [[0.64, 0], [0.74, 1], [0.84, 0], [0.9, 1], [1, 0]].forEach(([offset, opacity]) =>
+      frames.push({ offset, easing: 'steps(1, end)', transform: 'translate(-50%, -32px)', opacity }));
+    el.animate(frames, { duration: rand(650, 800), fill: 'forwards' });
+  }
+
+  // f. CRT glitch: broken scanline strips flicker and jitter around the click for ~200ms
+  function glitchFx(x, y) {
+    const strips = 4 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < strips; i++) {
+      const w = grid(rand(16, 64)), h = Math.random() < 0.3 ? 8 : 4;
+      const color = i % 2 ? BLUE : INK;
+      const frames = Array.from({ length: 7 }, (_, k) => ({
+        offset: Math.pow(k / 6, 1.2), easing: 'steps(1, end)',
+        transform: `translate(${grid(rand(-8, 8))}px, 0px)`,
+        opacity: k === 6 ? 0 : (k === 0 || Math.random() < 0.7 ? 1 : 0),
+      }));
+      spawn(x + rand(-40, 40), y + rand(-24, 24), {
+        w, h, duration: rand(180, 240), frames,
+        color: `repeating-linear-gradient(90deg, ${color} 0 8px, transparent 8px 12px)`,
+      });
+    }
+  }
+
+  const EFFECTS = [burstFx, shockwaveFx, fountainFx, fireworkFx, scoreFx, glitchFx];
+
+  function pickEffect() {
+    if (lastEffect < 0) return Math.floor(Math.random() * EFFECTS.length);
+    const i = Math.floor(Math.random() * (EFFECTS.length - 1));
+    return i >= lastEffect ? i + 1 : i;
+  }
+
+  return function fire(x, y) {
+    lastEffect = pickEffect();
+    EFFECTS[lastEffect](x, y);
+  };
+}
 
 // Pixel cursor — only on devices with a fine pointer that can hover
 (function () {
@@ -401,22 +600,6 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
     else window.addEventListener('load', () => whenIdle(preload), { once: true });
   }
 
-  // One mosaic tier: the image cover-cropped into the frame at one sample per block, blown back up
-  function drawMosaic(img, block) {
-    const cols = Math.ceil(CARD_W / block), rows = Math.ceil(CARD_H / block);
-    const small = document.createElement('canvas');
-    small.width = cols;
-    small.height = rows;
-    const sctx = small.getContext('2d');
-    sctx.imageSmoothingQuality = 'high';
-    const scale = Math.max(CARD_W / img.naturalWidth, CARD_H / img.naturalHeight);
-    const sw = CARD_W / scale, sh = CARD_H / scale;
-    sctx.drawImage(img, (img.naturalWidth - sw) / 2, (img.naturalHeight - sh) / 2, sw, sh, 0, 0, cols, rows);
-    const ctx = cardMosaic.getContext('2d');
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(small, 0, 0, cols * block, rows * block);
-  }
-
   function showCard(row) {
     if (!card || row === cardRow) return;
     const wasOpen = !!cardRow;
@@ -452,7 +635,7 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
       const step = () => {
         if (token !== cardToken) return;
         if (k < CARD_TIERS.length) {
-          drawMosaic(img, CARD_TIERS[k++]);
+          drawMosaic(cardMosaic, img, CARD_TIERS[k++]);
           mosaicTimer = setTimeout(step, CARD_STEP_MS);
         } else cardMosaic.hidden = true;
       };
@@ -529,184 +712,113 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
     if (link) window.open(link.href, '_blank', 'noopener');
   });
 
-  // Click effects: six stepped pixel effects on a 4px grid, one per click, never the same twice
-  // in a row. Elements come from fixed pools, so the pool sizes cap what's on screen.
-  const INK = 'var(--ink)', BLUE = 'var(--pixel)';
-  const WORDS = ['+100', 'RAD', 'OK!', 'WOW', 'NICE'];
-  const rand = (a, b) => a + Math.random() * (b - a);
-  const grid = v => Math.round(v / 4) * 4;
-  const easeOut = t => 1 - Math.pow(1 - t, 3);
-
-  function makePool(n, className) {
-    return Array.from({ length: n }, () => {
-      const el = document.createElement('div');
-      el.className = className;
-      el.setAttribute('aria-hidden', 'true');
-      document.body.append(el);
-      return el;
-    });
-  }
-  const fxBits = makePool(72, 'fx-bit');
-  const fxWords = makePool(3, 'fx-word');
-  let nextBitFx = 0, nextWord = 0, lastEffect = -1;
-
-  // n+1 hard-cut keyframes; each step lasts longer than the one before, so motion starts fast and settles
-  function stepped(n, at) {
-    return Array.from({ length: n + 1 }, (_, i) => {
-      const t = i / n;
-      const f = at(t);
-      return {
-        offset: f.offset ?? Math.pow(t, 1.35),
-        easing: 'steps(1, end)',
-        transform: `translate(${grid(f.x || 0)}px, ${grid(f.y || 0)}px) scale(${f.s ?? 1})`,
-        opacity: f.o ?? 1,
-      };
-    });
-  }
-
-  function spawn(x, y, { w = 4, h = w, color = INK, frames, duration }) {
-    const el = fxBits[nextBitFx];
-    nextBitFx = (nextBitFx + 1) % fxBits.length;
-    el.getAnimations().forEach(a => a.cancel());
-    el.style.width = `${w}px`;
-    el.style.height = `${h}px`;
-    el.style.background = color;
-    el.style.translate = `${grid(x - w / 2)}px ${grid(y - h / 2)}px`;
-    el.animate(frames, { duration, fill: 'forwards' });
-  }
-
-  const mixed = blueShare => (Math.random() < blueShare ? BLUE : INK);
-
-  // a. Burst: 16 pixels out in every direction, arcing down with gravity as they fade
-  function burstFx(x, y) {
-    for (let i = 0; i < 16; i++) {
-      const angle = (i / 16) * Math.PI * 2 + rand(-0.2, 0.2);
-      const dist = rand(20, 56), drop = rand(12, 32);
-      spawn(x, y, {
-        w: Math.random() < 0.3 ? 8 : 4, color: mixed(0.35), duration: rand(420, 640),
-        frames: stepped(6, t => ({
-          x: Math.cos(angle) * dist * easeOut(t),
-          y: Math.sin(angle) * dist * easeOut(t) + drop * t * t,
-          s: t > 0.65 ? 0.5 : 1,
-          o: t < 1 ? 1 : 0,
-        })),
-      });
-    }
-  }
-
-  // b. Shockwave: four rings, each wider, thinner and bluer, shown one after another
-  function shockwaveFx(x, y) {
-    const RINGS = [[8, 12], [16, 12], [24, 10], [32, 8]]; // radius, pixel count
-    const WINDOWS = [0, 0.14, 0.32, 0.58, 1];              // uneven: early rings flash by
-    const spin = rand(0, Math.PI), duration = rand(360, 440);
-    RINGS.forEach(([radius, count], k) => {
-      for (let i = 0; i < count; i++) {
-        const angle = spin + (i / count) * Math.PI * 2;
-        const start = WINDOWS[k], end = WINDOWS[k + 1];
-        const frames = [];
-        if (start > 0) frames.push({ offset: 0, opacity: 0, easing: 'steps(1, end)' });
-        frames.push({ offset: start, opacity: 1, easing: 'steps(1, end)' });
-        frames.push({ offset: end, opacity: 0, easing: 'steps(1, end)' });
-        if (end < 1) frames.push({ offset: 1, opacity: 0 });
-        spawn(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius, {
-          color: k < 2 ? INK : BLUE, duration, frames,
-        });
-      }
-    });
-  }
-
-  // c. Fountain: a spray shoots up and falls back down past the click point
-  function fountainFx(x, y) {
-    const count = 12 + Math.floor(Math.random() * 5);
-    for (let i = 0; i < count; i++) {
-      const vx = rand(-44, 44), rise = rand(36, 72), fall = rand(16, 40);
-      // y(t) = -v·t + (g/2)·t², peaking at -rise and ending at +fall
-      const v = 2 * (rise + Math.sqrt(rise * rise + rise * fall)), g = 2 * (fall + v);
-      spawn(x, y, {
-        w: Math.random() < 0.25 ? 8 : 4, color: mixed(0.4), duration: rand(620, 820),
-        frames: stepped(8, t => ({ offset: t, x: vx * t, y: -v * t + (g / 2) * t * t, o: t < 1 ? 1 : 0 })),
-      });
-    }
-  }
-
-  // d. Firework: a rocket climbs, hangs for a beat, then pops into a small burst
-  function fireworkFx(x, y) {
-    const height = grid(rand(52, 68)), duration = rand(880, 1000);
-    const LAUNCH_END = 0.36, POP = 0.5;
-    const rocket = [0, 1, 2, 3, 4].map(i => ({
-      offset: LAUNCH_END * Math.pow(i / 4, 1.3), easing: 'steps(1, end)',
-      transform: `translate(0px, ${grid(-height * easeOut(i / 4))}px)`, opacity: 1,
-    }));
-    rocket.push({ offset: POP, transform: `translate(0px, ${-height}px)`, opacity: 0, easing: 'steps(1, end)' });
-    rocket.push({ offset: 1, transform: `translate(0px, ${-height}px)`, opacity: 0 });
-    spawn(x, y, { color: INK, duration, frames: rocket });
-
-    const sparks = 9 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < sparks; i++) {
-      const angle = (i / sparks) * Math.PI * 2 + rand(-0.25, 0.25);
-      const dist = rand(12, 28);
-      const frames = [{ offset: 0, opacity: 0, easing: 'steps(1, end)' }];
-      for (let k = 0; k <= 5; k++) {
-        const t = k / 5;
-        frames.push({
-          offset: POP + (1 - POP) * Math.pow(t, 1.35), easing: 'steps(1, end)',
-          transform: `translate(${grid(Math.cos(angle) * dist * easeOut(t))}px, ${grid(Math.sin(angle) * dist * easeOut(t) + 16 * t * t)}px)`,
-          opacity: k < 5 ? 1 : 0,
-        });
-      }
-      spawn(x, y - height, { color: mixed(0.6), duration, frames });
-    }
-  }
-
-  // e. Score popup: a word jumps up in steps, then blinks out
-  function scoreFx(x, y) {
-    const el = fxWords[nextWord];
-    nextWord = (nextWord + 1) % fxWords.length;
-    el.getAnimations().forEach(a => a.cancel());
-    el.textContent = WORDS[Math.floor(Math.random() * WORDS.length)];
-    el.style.translate = `${grid(x + rand(-8, 8))}px ${grid(y) - 12}px`;
-    const rise = [0, 12, 20, 28, 32];
-    const frames = rise.map((dy, i) => ({
-      offset: [0, 0.08, 0.2, 0.34, 0.5][i], easing: 'steps(1, end)',
-      transform: `translate(-50%, ${-dy}px)`, opacity: 1,
-    }));
-    [[0.64, 0], [0.74, 1], [0.84, 0], [0.9, 1], [1, 0]].forEach(([offset, opacity]) =>
-      frames.push({ offset, easing: 'steps(1, end)', transform: 'translate(-50%, -32px)', opacity }));
-    el.animate(frames, { duration: rand(650, 800), fill: 'forwards' });
-  }
-
-  // f. CRT glitch: broken scanline strips flicker and jitter around the click for ~200ms
-  function glitchFx(x, y) {
-    const strips = 4 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < strips; i++) {
-      const w = grid(rand(16, 64)), h = Math.random() < 0.3 ? 8 : 4;
-      const color = i % 2 ? BLUE : INK;
-      const frames = Array.from({ length: 7 }, (_, k) => ({
-        offset: Math.pow(k / 6, 1.2), easing: 'steps(1, end)',
-        transform: `translate(${grid(rand(-8, 8))}px, 0px)`,
-        opacity: k === 6 ? 0 : (k === 0 || Math.random() < 0.7 ? 1 : 0),
-      }));
-      spawn(x + rand(-40, 40), y + rand(-24, 24), {
-        w, h, duration: rand(180, 240), frames,
-        color: `repeating-linear-gradient(90deg, ${color} 0 8px, transparent 8px 12px)`,
-      });
-    }
-  }
-
-  const EFFECTS = [burstFx, shockwaveFx, fountainFx, fireworkFx, scoreFx, glitchFx];
-
-  function pickEffect() {
-    if (lastEffect < 0) return Math.floor(Math.random() * EFFECTS.length);
-    const i = Math.floor(Math.random() * (EFFECTS.length - 1));
-    return i >= lastEffect ? i + 1 : i;
-  }
+  const clickFx = makeClickEffects();
 
   document.addEventListener('mousedown', e => {
     if (e.button !== 0 || overField || reduceMotion.matches) return;
     if (e.target.closest && e.target.closest('input, textarea, select')) return;
-    lastEffect = pickEffect();
-    EFFECTS[lastEffect](e.clientX, e.clientY);
+    clickFx(e.clientX, e.clientY);
   });
+})();
+
+// Touch: taps get the click effects, and tapping anywhere on a list row opens its link
+(function () {
+  if (!TOUCH) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  // A tap is a touch that lifts close to where it started. Scrolls cancel the pointer (or travel),
+  // so they never fire. Listeners are passive and the effects ignore pointers, so nothing waits on them.
+  let clickFx = null, tap = null;
+  document.addEventListener('pointerdown', e => {
+    tap = null;
+    if (e.pointerType !== 'touch' || !e.isPrimary || reduceMotion.matches) return;
+    if (e.target.closest && e.target.closest('input, textarea, select, .rocks-pad')) return;
+    tap = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp };
+  }, { passive: true });
+  document.addEventListener('pointerup', e => {
+    if (!tap || e.pointerId !== tap.id) return;
+    const { x, y, t } = tap;
+    tap = null;
+    if (Math.hypot(e.clientX - x, e.clientY - y) > 10 || e.timeStamp - t > 600) return;
+    clickFx = clickFx || makeClickEffects(); // the pools are only built once someone taps
+    clickFx(e.clientX, e.clientY);
+  }, { passive: true });
+  document.addEventListener('pointercancel', () => { tap = null; }, { passive: true });
+
+  document.addEventListener('click', e => {
+    const row = e.target.closest && e.target.closest('.work-item, .project-item');
+    if (!row || e.target.closest('a')) return;
+    const link = row.querySelector('.work-link, .project-link');
+    if (link) link.click();
+  });
+})();
+
+// Touch work thumbnails: each row gets a small square of its case study image. It loads as the row
+// nears the screen, and the first time the row comes into view it resolves through the same mosaic
+// tiers as the desktop preview card (16px, 8px, 4px, then the real image).
+(function () {
+  const list = document.getElementById('work-list');
+  const rows = list ? [...list.querySelectorAll('.work-item[data-media]')] : [];
+  if (!TOUCH || !rows.length || !('IntersectionObserver' in window)) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const SIZE = 64, TIERS = [16, 8, 4], STEP_MS = 110;
+
+  list.classList.add('has-thumbs');
+  const thumbs = new Map(rows.map(row => {
+    const thumb = document.createElement('span');
+    thumb.className = 'work-thumb';
+    thumb.setAttribute('aria-hidden', 'true');
+    thumb.innerHTML = `<img alt="" decoding="async"><canvas width="${SIZE}" height="${SIZE}"></canvas>`;
+    row.prepend(thumb);
+    return [row, thumb];
+  }));
+
+  const load = row => {
+    const img = thumbs.get(row).querySelector('img');
+    if (!img.getAttribute('src')) img.src = row.dataset.media;
+    return img;
+  };
+
+  function reveal(row) {
+    const thumb = thumbs.get(row);
+    const img = load(row);
+    const canvas = thumb.querySelector('canvas');
+    if (reduceMotion.matches) { canvas.hidden = true; return; }
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--pixel').trim() || '#1f3bd6';
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    const resolve = () => {
+      if (!img.naturalWidth) return; // no image: the cobalt square stays
+      let k = 0;
+      const step = () => {
+        if (k < TIERS.length) {
+          drawMosaic(canvas, img, TIERS[k++]);
+          setTimeout(step, STEP_MS);
+        } else canvas.hidden = true;
+      };
+      step();
+    };
+    if (img.complete) resolve();
+    else ['load', 'error'].forEach(type => img.addEventListener(type, resolve, { once: true }));
+  }
+
+  // Two watchers: one fetches a little ahead of the scroll, the other starts the reveal once the
+  // row is mostly on screen. Rows hidden by the collapsed list are skipped until they're shown.
+  const near = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      near.unobserve(e.target);
+      load(e.target);
+    }
+  }, { rootMargin: '300px 0px' });
+  const seen = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      seen.unobserve(e.target);
+      reveal(e.target);
+    }
+  }, { threshold: 0.6 });
+  rows.forEach(row => { near.observe(row); seen.observe(row); });
 })();
 
 // Retro headshot — the photo is DOS-dithered onto a canvas above it. On hover the whole image
@@ -1087,6 +1199,8 @@ const retroTerminal = (function () {
   const PROMPT = 'C:\\>';
   const LINKEDIN = 'https://www.linkedin.com/in/russellgreene/';
   const CLOSE_MS = 120;
+  // Touch: tappable commands above the prompt (ROCKS stays a secret)
+  const KEYS = ['HELP', 'DIR', 'WHOAMI', 'COLOR', 'TIME'];
   const nyc = opts => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', ...opts });
 
   let overlay, screen, output, input, typed, closeBox, title, gameHost, announcer;
@@ -1131,6 +1245,25 @@ const retroTerminal = (function () {
     announcer = overlay.querySelector('.dos-term-announce');
     overlay.querySelector('.dos-term-prompt').textContent = PROMPT;
 
+    // Touch: the prompt line leaves the scrolling screen and sits under a row of command keys at
+    // the bottom of the window, so it stays in view above the on-screen keyboard
+    if (TOUCH) {
+      const keys = document.createElement('div');
+      keys.className = 'dos-term-keys';
+      keys.setAttribute('role', 'group');
+      keys.setAttribute('aria-label', 'Commands');
+      keys.innerHTML = KEYS.map(k => `<button type="button" class="dos-term-key" data-cmd="${k}">${k}</button>`).join('');
+      screen.after(keys);
+      keys.after(overlay.querySelector('.dos-term-line'));
+      // Pressing a key never takes focus, so an open keyboard stays open (and a closed one stays closed)
+      keys.addEventListener('pointerdown', e => { if (e.target.closest('.dos-term-key')) e.preventDefault(); });
+      keys.addEventListener('mousedown', e => e.preventDefault());
+      keys.addEventListener('click', e => {
+        const key = e.target.closest('.dos-term-key');
+        if (key && !launching && !game) submit(key.dataset.cmd);
+      });
+    }
+
     closeBox.addEventListener('click', close);
     // The visible line mirrors the (transparent) input, so the block cursor always sits at the end
     input.addEventListener('input', () => { typed.textContent = input.value; });
@@ -1159,18 +1292,57 @@ const retroTerminal = (function () {
     typed.textContent = value;
   }
 
+  // Run a line as if it had been typed at the prompt
+  function submit(line) {
+    setInput('');
+    print(PROMPT + line);
+    if (line.trim()) {
+      history.push(line);
+      historyAt = history.length;
+    }
+    run(line);
+  }
+
+  // Touch: while the terminal is open the page behind it can't scroll (iOS ignores overflow on its
+  // own, so the body is pinned in place), and the overlay tracks the visual viewport so the window
+  // always fits above the on-screen keyboard
+  let lockedY = 0;
+  function lockPage(on) {
+    if (on) {
+      lockedY = window.scrollY;
+      document.body.style.top = `-${lockedY}px`;
+      root.classList.add('term-locked');
+    } else {
+      root.classList.remove('term-locked');
+      document.body.style.top = '';
+      window.scrollTo({ top: lockedY, behavior: 'instant' });
+    }
+  }
+
+  function fitViewport() {
+    const vv = window.visualViewport;
+    if (!vv || !isOpen) return;
+    overlay.style.setProperty('--vv-top', `${vv.offsetTop}px`);
+    overlay.style.setProperty('--vv-height', `${vv.height}px`);
+    screen.scrollTop = screen.scrollHeight;
+  }
+
+  function trackViewport(on) {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const method = on ? 'addEventListener' : 'removeEventListener';
+    vv[method]('resize', fitViewport);
+    vv[method]('scroll', fitViewport);
+    if (!on) return;
+    overlay.classList.add('is-fit');
+    fitViewport();
+  }
+
   function onInputKey(e) {
     if (launching) { e.preventDefault(); return; }
     if (e.key === 'Enter') {
       e.preventDefault();
-      const line = input.value;
-      setInput('');
-      print(PROMPT + line);
-      if (line.trim()) {
-        history.push(line);
-        historyAt = history.length;
-      }
-      run(line);
+      submit(input.value);
     } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       if (!history.length) return;
       e.preventDefault();
@@ -1188,6 +1360,10 @@ const retroTerminal = (function () {
       overlay.hidden = false;
       overlay.classList.remove('is-closing');
       overlay.classList.add('is-open');
+      if (TOUCH) {
+        lockPage(true);
+        trackViewport(true);
+      }
       if (!booted) {
         booted = true;
         print('RUSSELL-DOS Version 6.22', '(C)Copyright Russell Greene 2026.', '', 'Type HELP for a list of commands.', '');
@@ -1208,7 +1384,11 @@ const retroTerminal = (function () {
       overlay.classList.add('is-closing');
       closeTimer = setTimeout(finish, CLOSE_MS);
     }
-    if (lastFocus && lastFocus.focus) lastFocus.focus();
+    if (TOUCH) {
+      trackViewport(false);
+      lockPage(false);
+    }
+    if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: TOUCH });
   }
 
   // What DIR lists: the work list on the homepage, the vibe projects once /vibe is unlocked
@@ -1303,10 +1483,33 @@ const retroTerminal = (function () {
   });
 
   // Largest whole-number scale of the 320×200 screen that fits the window (0 if it doesn't fit)
-  function rocksScale(touch) {
+  function rocksScale() {
     const width = window.innerWidth - 32 - 40;             // overlay gutters, frame and padding
-    const height = window.innerHeight * 0.88 - 80 - (touch ? 64 : 0); // top offset, title bar, touch pad
+    const height = window.innerHeight * 0.88 - 80;         // top offset, title bar
     return Math.min(3, Math.floor(Math.min(width / 320, height / 200)));
+  }
+
+  // Touch: any scale that fits (phones are too small for whole numbers). Upright, the buttons sit
+  // under the screen; sideways, they flank it. `rotate` is set when turning the phone would give
+  // a noticeably bigger screen.
+  const ROCKS_MIN_TOUCH = 0.75;
+  function rocksTouchFit() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const CHROME_W = 44, CHROME_H = 100;      // overlay gutters, frame, title bar and padding
+    const PAD_H = 150, PAD_W = 270;          // buttons below (upright) or at the sides (sideways)
+    const fit = (width, height, upright) => Math.min(3,
+      (width - CHROME_W - (upright ? 0 : PAD_W)) / 320,
+      (height - CHROME_H - (upright ? PAD_H : 0)) / 200);
+    const upright = h > w;
+    const scale = fit(w, h, upright);
+    return { scale, rotate: upright && fit(h, w, false) > scale * 1.25 };
+  }
+
+  function refitRocks() {
+    if (!game) return;
+    const { scale, rotate } = rocksTouchFit();
+    game.resize(Math.max(ROCKS_MIN_TOUCH, scale));
+    gameHost.classList.toggle('wants-rotate', rotate);
   }
 
   function rocks() {
@@ -1334,8 +1537,8 @@ const retroTerminal = (function () {
     if (!launching) return;
     launching = false;
     const touch = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    const scale = rocksScale(touch);
-    if (scale < 1) {
+    const scale = touch ? rocksTouchFit().scale : rocksScale();
+    if (scale < (touch ? ROCKS_MIN_TOUCH : 1)) {
       print('', 'ROCKS.EXE needs a bigger screen than this one.', 'Try it on a computer or a larger window.', '');
       return;
     }
@@ -1344,13 +1547,19 @@ const retroTerminal = (function () {
     title.textContent = 'C:\\RUSSELL\\ROCKS.EXE';
     const background = getComputedStyle(root).getPropertyValue('--pixel').trim() || '#1f3bd6';
     game = window.RocksGame.create(gameHost, { scale, touch, background, theme: currentTheme(), announce, onExit: endRocks });
+    if (touch) {
+      refitRocks();
+      window.addEventListener('resize', refitRocks);
+    }
     gameHost.focus();
     announce(touch
-      ? 'ROCKS.EXE is running. Tap FIRE to start. Buttons below the game turn left and right, thrust, fire, and jump to hyperspace.'
+      ? 'ROCKS.EXE is running. Tap FIRE to start. Buttons on the left turn and thrust; on the right, fire and jump to hyperspace. EXIT returns to the prompt.'
       : 'ROCKS.EXE is running. Press Space to start. Arrow keys or W A S D turn and thrust, Space fires, Down or S jumps to hyperspace, P pauses, M toggles sound, Escape quits.');
   }
 
   function restoreTerminal() {
+    window.removeEventListener('resize', refitRocks);
+    gameHost.classList.remove('wants-rotate');
     overlay.classList.remove('is-game');
     gameHost.hidden = true;
     gameHost.textContent = '';
@@ -1362,7 +1571,9 @@ const retroTerminal = (function () {
     game = null;
     restoreTerminal();
     print(`Thanks for playing. Score: ${score}.`);
-    input.focus();
+    // Touch: back at the prompt without throwing up the keyboard
+    if (TOUCH) closeBox.focus({ preventScroll: true });
+    else input.focus();
   }
 
   // Closing the terminal: stop the loop and any sound, no message
@@ -1582,7 +1793,8 @@ const retroTerminal = (function () {
 })();
 
 // Core expertise readout: resting on a skill (or tapping, clicking to pin, or focusing it) shows
-// its related work and types its description into a DOS-style panel under the grid
+// its related work and types its description into a DOS-style panel under the grid. On touch
+// screens and narrow windows the same panel opens inline, right under the tapped skill, instead.
 (function () {
   const section = document.querySelector('.expertise');
   const items = section ? [...section.querySelectorAll('.expertise-item')] : [];
@@ -1590,7 +1802,9 @@ const retroTerminal = (function () {
   if (!items.length || !details) return;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const canHover = window.matchMedia('(hover: hover)').matches;
+  const inlineQuery = window.matchMedia('(hover: none) and (pointer: coarse), (max-width: 660px)');
   const CHAR_MS = 12;
+  let inline = false;
 
   const panel = document.createElement('div');
   panel.className = 'xp-panel';
@@ -1654,6 +1868,7 @@ const retroTerminal = (function () {
 
   // Fixed height: the tallest of all states at the current width, so hovering never shifts layout
   function measure() {
+    if (inline) return; // inline, the panel is only as tall as the open skill needs
     const probe = panel.cloneNode(true);
     probe.removeAttribute('aria-live');
     probe.setAttribute('aria-hidden', 'true');
@@ -1669,13 +1884,15 @@ const retroTerminal = (function () {
   }
 
   let shown = null, pinned = null, typeTimer = 0;
+  let intentTimer = 0, overPanel = false, pointerFocus = false, focusPinned = null;
 
   // Put a skill (or the idle prompt) on the panel. Re-showing the same skill only refreshes
   // the prompt line, so pinning or unpinning never restarts the typing.
   function show(item) {
     items.forEach(i => {
       i.classList.toggle('is-selected', i === item);
-      if (canHover) i.setAttribute('aria-pressed', String(i === pinned));
+      if (inline) i.setAttribute('aria-expanded', String(i === item));
+      else if (canHover) i.setAttribute('aria-pressed', String(i === pinned));
     });
     if (item === shown) {
       const prompt = panel.querySelector('.xp-prompt');
@@ -1690,6 +1907,11 @@ const retroTerminal = (function () {
     }
     shown = item;
     clearInterval(typeTimer);
+    if (inline) {
+      // Move the panel under the open skill before it fills, so the live region is in place
+      panel.hidden = !item;
+      if (item) item.after(panel);
+    }
     const announce = panel.querySelector('.xp-announce');
     if (!item) {
       announce.textContent = '';
@@ -1713,8 +1935,36 @@ const retroTerminal = (function () {
     show(item || shown);
   }
 
-  fill(panel, null);
-  measure();
+  // Panel under the grid, or inline under each skill; switching (say, resizing past 660px) starts fresh
+  function setMode() {
+    inline = inlineQuery.matches;
+    section.classList.toggle('xp-inline', inline);
+    clearInterval(typeTimer);
+    clearTimeout(intentTimer);
+    shown = null;
+    pinned = null;
+    focusPinned = null;
+    items.forEach(i => {
+      i.classList.remove('is-selected');
+      i.removeAttribute('aria-pressed');
+      i.removeAttribute('aria-expanded');
+      if (inline) i.setAttribute('aria-expanded', 'false');
+    });
+    panel.querySelector('.xp-announce').textContent = '';
+    fill(panel, null);
+    if (inline) {
+      panel.hidden = true;
+      panel.style.height = '';
+    } else {
+      details.before(panel);
+      panel.hidden = false;
+      measure();
+    }
+  }
+
+  setMode();
+  // Chrome can fire change without the result changing (a zoom or a screenshot); only a real switch resets
+  inlineQuery.addEventListener('change', () => { if (inlineQuery.matches !== inline) setMode(); });
   // Re-measure when the column width changes (the height it sets would otherwise re-trigger this)
   let measuredWidth = panel.offsetWidth;
   new ResizeObserver(() => {
@@ -1727,17 +1977,15 @@ const retroTerminal = (function () {
   // Hover intent: a skill only takes over the panel after the pointer rests on it, never while
   // the pointer is inside the panel, and never while another skill is pinned
   const INTENT_MS = 150;
-  let intentTimer = 0, overPanel = false;
   panel.addEventListener('mouseenter', () => { overPanel = true; clearTimeout(intentTimer); });
   panel.addEventListener('mouseleave', () => { overPanel = false; });
 
-  let pointerFocus = false, focusPinned = null;
   items.forEach(item => {
     if (canHover) {
       item.addEventListener('mouseenter', () => {
         clearTimeout(intentTimer);
         intentTimer = setTimeout(() => {
-          if (!pinned && !overPanel) show(item);
+          if (!pinned && !overPanel && !inline) show(item);
         }, INTENT_MS);
       });
       item.addEventListener('mouseleave', () => clearTimeout(intentTimer));
@@ -1746,6 +1994,7 @@ const retroTerminal = (function () {
     // Keyboard focus pins the focused skill; focus that comes from a click or tap is left to the click
     item.addEventListener('focus', () => {
       if (pointerFocus) { pointerFocus = false; return; }
+      if (inline) return; // inline skills open with Enter or Space, like any disclosure
       focusPinned = item;
       pin(item);
     });
@@ -1757,8 +2006,8 @@ const retroTerminal = (function () {
     item.addEventListener('click', e => {
       pointerFocus = false;
       clearTimeout(intentTimer);
-      if (!canHover) {
-        // Touch: tapping the shown skill again returns to the idle prompt
+      if (inline || !canHover) {
+        // Touch: tapping the shown skill again closes it (inline) or returns to the idle prompt
         show(item === shown ? null : item);
         return;
       }
