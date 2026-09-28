@@ -1153,7 +1153,7 @@
 </script>
 
 <script>
-  // Retro headshot — the photo is palette-dithered onto a canvas above it. Inside the reveal
+  // Retro headshot — the photo is DOS-dithered onto a canvas above it. Inside the reveal
   // circle a colour mosaic resolves tier by tier, then the cells clear to show the real photo.
   (function () {
     const wrap = document.querySelector('.hero-photo-wrap');
@@ -1164,35 +1164,18 @@
     const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-    const CELL = 4;                 // on-screen size of one palette pixel, in CSS px
+    const CELL = 4;                 // on-screen size of one dither pixel, in CSS px
     const REVEAL = 90;              // reveal radius, in CSS px
     const TIER_MS = 250;            // time per mosaic tier
     const TIER_BLOCKS = [4, 2, 1];  // mosaic block size in cells (16px, 8px, 4px), then the real photo
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
     const INK = [14, 14, 14], GRAY = [154, 154, 154], PAPER = [245, 243, 239], BLUE = [31, 59, 214];
 
-    // dos: brightness ramps over the site colours. Saturated blues get the cobalt, everything else
+    // Brightness ramps over the site colours. Saturated blues get the cobalt, everything else
     // stays neutral; blue holds across a wide band so the backdrop reads as solid cobalt, not speckle.
     const BLUE_RAMP = [[INK, 0], [BLUE, 0.1], [BLUE, 0.5], [PAPER, 0.9]];
     const GRAY_RAMP = [[INK, 0.1], [GRAY, 0.5], [PAPER, 0.85]];
     const SHARPEN = 1.2, CONTRAST = 1.5, LIFT = 0.02;
-
-    // nes: fixed colours from the NES hardware palette
-    const NES = [
-      '000000', '7c7c7c', 'bcbcbc', 'f8f8f8',  // black, grays, white
-      '0000bc', '0058f8', '6888fc', '004058',  // backdrop blues, shirt blue-gray, dark teal
-      '503000', '881400', 'ac7c00',            // beard browns
-      'f87858', 'f0d0b0', 'fce0a8',            // skin
-    ].map(hex => [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16)));
-
-    // snes: adaptive palette from the photo itself, with the backdrop snapped to --pixel
-    const SNES_COLORS = 32;
-    const NES_SHARPEN = 1, NES_CONTRAST = 1.15, NES_SPREAD = 40;
-    const SNES_SHARPEN = 0.8, SNES_CONTRAST = 1.1, SNES_SPREAD = 20;
-
-    const PALETTES = { dos: ditherDos, nes: ditherNes, snes: ditherSnes };
-    const requested = new URLSearchParams(location.search).get('palette');
-    const palette = PALETTES[requested] ? requested : 'snes';
 
     const canvas = document.createElement('canvas');
     canvas.className = 'hero-dither';
@@ -1232,7 +1215,7 @@
       return sctx.getImageData(0, 0, cols, rows);
     }
 
-    function ditherDos(data) {
+    function dither(data) {
       const d = data.data;
       const n = cols * rows;
       const lum = new Float32Array(n), blue = new Uint8Array(n);
@@ -1270,93 +1253,6 @@
       }
     }
 
-    function nearest(pal, r, g, b) {
-      let best = pal[0], bestDist = Infinity;
-      for (const c of pal) {
-        const dr = r - c[0], dg = g - c[1], db = b - c[2];
-        const dist = 2 * dr * dr + 4 * dg * dg + 3 * db * db;
-        if (dist < bestDist) { bestDist = dist; best = c; }
-      }
-      return best;
-    }
-
-    // Ordered dither against any palette: nudge each channel by the Bayer threshold, then snap.
-    // `fixed` can pin a pixel to a colour and skip the dither.
-    function orderedDither(data, pal, spread, fixed) {
-      const d = data.data;
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          const i = (y * cols + x) * 4;
-          const r = d[i], g = d[i + 1], b = d[i + 2];
-          const o = (threshold(x, y) - 0.5) * spread;
-          const c = (fixed && fixed(r, g, b)) || nearest(pal, r + o, g + o, b + o);
-          d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
-        }
-      }
-    }
-
-    // Unsharp mask each channel against its 3x3 neighbourhood, then stretch contrast.
-    // The flat blue backdrop is left alone so it keeps its hue.
-    function sharpen(data, amount, contrast) {
-      const d = data.data, src = new Uint8ClampedArray(d);
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          const i = (y * cols + x) * 4;
-          if (isBlue(src[i], src[i + 1], src[i + 2])) continue;
-          for (let c = 0; c < 3; c++) {
-            let sum = 0, count = 0;
-            for (let j = -1; j <= 1; j++) {
-              for (let k = -1; k <= 1; k++) {
-                const yy = y + j, xx = x + k;
-                if (yy >= 0 && yy < rows && xx >= 0 && xx < cols) { sum += src[(yy * cols + xx) * 4 + c]; count++; }
-              }
-            }
-            const v = src[i + c] + amount * (src[i + c] - sum / count);
-            d[i + c] = (v - 128) * contrast + 128;
-          }
-        }
-      }
-    }
-
-    function ditherNes(data) {
-      sharpen(data, NES_SHARPEN, NES_CONTRAST);
-      orderedDither(data, NES, NES_SPREAD);
-    }
-
-    function ditherSnes(data) {
-      sharpen(data, SNES_SHARPEN, SNES_CONTRAST);
-      const d = data.data, px = [];
-      for (let i = 0; i < d.length; i += 4) {
-        if (!isBlue(d[i], d[i + 1], d[i + 2])) px.push([d[i], d[i + 1], d[i + 2]]);
-      }
-      const pal = medianCut(px, SNES_COLORS - 1);
-      pal.push(BLUE);
-      orderedDither(data, pal, SNES_SPREAD, (r, g, b) => isBlue(r, g, b) ? BLUE : null);
-    }
-
-    // Split the colour box with the widest channel range (weighted by population) until n boxes
-    function medianCut(px, n) {
-      if (!px.length) return [];
-      const boxes = [px];
-      while (boxes.length < n) {
-        let bi = -1, bc = 0, best = 0;
-        boxes.forEach((box, i) => {
-          if (box.length < 2) return;
-          for (let c = 0; c < 3; c++) {
-            let lo = 255, hi = 0;
-            for (const p of box) { if (p[c] < lo) lo = p[c]; if (p[c] > hi) hi = p[c]; }
-            const score = (hi - lo) * Math.sqrt(box.length);
-            if (score > best) { best = score; bi = i; bc = c; }
-          }
-        });
-        if (bi < 0) break;
-        const box = boxes[bi].sort((a, b) => a[bc] - b[bc]);
-        const mid = box.length >> 1;
-        boxes.splice(bi, 1, box.slice(0, mid), box.slice(mid));
-      }
-      return boxes.map(box => [0, 1, 2].map(c => Math.round(box.reduce((s, p) => s + p[c], 0) / box.length)));
-    }
-
     // Full-colour mosaics for the reveal, one per tier, at canvas resolution
     function buildTiers(base) {
       const s = base.data;
@@ -1388,7 +1284,7 @@
       const base = sample();
       tiers = buildTiers(base);
       dithered = new ImageData(new Uint8ClampedArray(base.data), cols, rows);
-      PALETTES[palette](dithered);
+      dither(dithered);
     }
 
     function render() {
