@@ -94,9 +94,18 @@
       margin-bottom: 28px;
     }
 
-    .hero-meta span {
+    .hero-meta > span {
       display: inline-block;
       margin-right: 24px;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
     }
 
     .hero h1 {
@@ -541,11 +550,10 @@
       <div class="hero-text">
         <p class="hero-meta">
           <span class="prompt-clock">NYC</span>
-          <span>Executive Producer @ BUCK</span>
-          <span>20+ Years</span>
+          <span><span class="visually-hidden">Executive Producer at BUCK</span><span aria-hidden="true">Executive Producer @ <span class="dos-field">BUCK<b class="block-cursor dos-field-cursor"></b></span></span></span>
         </p>
         <h1>Russell<br /><em>Greene</em></h1>
-        <p class="hero-bio">Orchestrating the friction between visionary storytelling and technological scale. I architect complex productions that define the frontier for global brands.</p>
+        <p class="hero-bio">Orchestrating the friction between visionary storytelling and technological scale. I architect complex productions that define the frontier for global brands. Off the clock, I'm still the kid in the computer lab: chasing science, playing video games, and programming little worlds like this one.</p>
         <a href="#contact" class="hero-cta dos-button"><span class="dos-button-icon" data-icon="envelope" aria-hidden="true"></span><span class="dos-button-label">Get in touch</span><b class="block-cursor dos-button-cursor" aria-hidden="true"></b></a>
       </div>
       <div class="hero-photo-wrap">

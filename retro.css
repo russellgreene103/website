@@ -195,6 +195,29 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
   50% { opacity: 0; }
 }
 
+/* BUCK: a filled-in DOS form field, value on a dotted fill line that runs a little past the text */
+.dos-field {
+  color: var(--pixel);
+  padding: 0 2ch 1px 0;
+  border-bottom: 1px dotted var(--pixel);
+}
+
+/* The cursor takes no space, so showing it never nudges the line */
+.dos-field-cursor { display: none; margin-right: -0.7em; }
+
+@media (hover: hover) and (pointer: fine) {
+  .dos-field:hover { color: var(--paper); background: var(--pixel); }
+  .dos-field:hover .dos-field-cursor { display: inline-block; }
+}
+
+/* Name glitch: a canvas laid over one letter of the hero heading (see retro.js) */
+.glitch-host { position: relative; }
+
+.glitch-letter {
+  position: absolute;
+  pointer-events: none;
+}
+
 /* Prompt clock in the hero meta line */
 .prompt-clock { cursor: pointer; }
 .prompt-clock:focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }

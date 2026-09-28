@@ -1122,7 +1122,7 @@ const retroTerminal = (function () {
       'Some commands are not listed here...'),
     dir,
     open: openItem,
-    whoami: () => print('RUSSELL GREENE', 'Executive Producer @ BUCK // NYC', '20+ years orchestrating complex productions for global brands.'),
+    whoami: () => print('RUSSELL GREENE', 'Executive Producer @ BUCK // NYC', 'Architecting complex productions for global brands.', 'Off the clock: science, video games, and little worlds like this one.'),
     contact: () => {
       const contact = document.getElementById('contact');
       if (!contact) { location.href = '/#contact'; return; }
@@ -1489,4 +1489,110 @@ const retroTerminal = (function () {
     button.classList.add('is-pressed');
     setTimeout(() => button.classList.remove('is-pressed'), PRESS_MS);
   });
+})();
+
+// Name glitch: every 5–12 seconds one or two letters of the hero heading briefly pixelate (6px
+// blocks, then 3px, then the real letter). Each glitch is a canvas laid over the letter, measured
+// with a Range, so the heading's text, layout and reading order are never touched.
+(function () {
+  const heading = document.querySelector('.hero h1');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (!heading || reduceMotion.matches || !('IntersectionObserver' in window)) return;
+  const STEP_MS = 80, BLOCKS = [6, 3];
+  const MIN_WAIT = 5000, MAX_WAIT = 12000;
+  heading.classList.add('glitch-host');
+
+  let onScreen = false, last = new Set();
+  new IntersectionObserver(entries => { onScreen = entries.some(e => e.isIntersecting); }).observe(heading);
+
+  // Every visible letter in the heading: its text node and offset (upright and italic alike)
+  function letters() {
+    const found = [];
+    const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      [...node.textContent].forEach((ch, i) => { if (/\S/.test(ch)) found.push({ node, i, ch }); });
+    }
+    return found;
+  }
+
+  function glitchLetter({ node, i, ch }) {
+    // Measured fresh each time, so resizes and late font loads never leave it misaligned
+    const range = document.createRange();
+    range.setStart(node, i);
+    range.setEnd(node, i + 1);
+    const box = range.getBoundingClientRect(), host = heading.getBoundingClientRect();
+    if (!box.width || !box.height) return;
+
+    const style = getComputedStyle(node.parentElement);
+    const pad = Math.ceil(box.height * 0.15); // room for italic overhang
+    const w = Math.ceil(box.width) + pad * 2, h = Math.ceil(box.height);
+
+    // The real glyph, drawn once as a coverage mask
+    const mask = document.createElement('canvas');
+    mask.width = w;
+    mask.height = h;
+    const m = mask.getContext('2d');
+    m.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    m.textBaseline = 'alphabetic';
+    const metrics = m.measureText(ch);
+    m.fillText(ch, pad, metrics.fontBoundingBoxAscent ?? h * 0.8);
+    const alpha = m.getImageData(0, 0, w, h).data;
+
+    const canvas = document.createElement('canvas');
+    const dpr = window.devicePixelRatio || 1;
+    canvas.className = 'glitch-letter';
+    canvas.setAttribute('aria-hidden', 'true');
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    Object.assign(canvas.style, {
+      left: `${box.left - host.left - pad}px`, top: `${box.top - host.top}px`, width: `${w}px`, height: `${h}px`,
+    });
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    const root = getComputedStyle(document.documentElement);
+    const paper = root.getPropertyValue('--paper').trim() || '#f5f3ef';
+    const ink = Math.random() < 0.25 ? (root.getPropertyValue('--pixel').trim() || '#1f3bd6') : style.color;
+
+    // One stage: blocks touching the glyph are papered over (hiding the real letter); the solid ones get ink
+    function draw(block) {
+      ctx.clearRect(0, 0, w, h);
+      for (let by = 0; by < h; by += block) {
+        for (let bx = 0; bx < w; bx += block) {
+          let sum = 0, n = 0;
+          for (let y = by; y < Math.min(by + block, h); y++) {
+            for (let x = bx; x < Math.min(bx + block, w); x++) { sum += alpha[(y * w + x) * 4 + 3]; n++; }
+          }
+          const cover = sum / (n * 255);
+          if (cover <= 0.02) continue;
+          ctx.fillStyle = cover > 0.4 ? ink : paper;
+          ctx.fillRect(bx, by, block, block);
+        }
+      }
+    }
+
+    draw(BLOCKS[0]);
+    heading.append(canvas);
+    BLOCKS.slice(1).forEach((block, k) => setTimeout(() => draw(block), (k + 1) * STEP_MS));
+    setTimeout(() => canvas.remove(), BLOCKS.length * STEP_MS);
+  }
+
+  function glitch() {
+    const all = letters();
+    // One letter usually, sometimes two; never one that glitched last time
+    const pool = all.filter(l => !last.has(`${l.node.textContent}:${l.i}`));
+    const count = Math.random() < 0.3 ? 2 : 1;
+    const picked = [];
+    while (picked.length < count && pool.length) picked.push(...pool.splice(Math.floor(Math.random() * pool.length), 1));
+    last = new Set(picked.map(l => `${l.node.textContent}:${l.i}`));
+    picked.forEach(glitchLetter);
+  }
+
+  function schedule() {
+    setTimeout(() => {
+      if (onScreen && !document.hidden) glitch();
+      schedule();
+    }, MIN_WAIT + Math.random() * (MAX_WAIT - MIN_WAIT));
+  }
+
+  document.fonts.ready.then(schedule);
 })();
