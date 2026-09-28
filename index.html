@@ -8,7 +8,7 @@
   <meta name="description" content="Executive Producer at BUCK. Orchestrating complex productions for global brands." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&family=Silkscreen&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -18,6 +18,7 @@
       --mid: #999;
       --rule: #d8d5cf;
       --accent: #0e0e0e;
+      --pixel: #1f3bd6;
       --serif: 'Cormorant Garamond', Georgia, serif;
       --mono: 'DM Mono', 'Courier New', monospace;
     }
@@ -511,59 +512,66 @@
       footer { flex-direction: column; gap: 8px; text-align: center; }
     }
 
-    /* ── Custom cursor (fine pointers only; elements are added by JS) ── */
-    .cursor-dot,
-    .cursor-ring {
+    /* ── Pixel cursor (fine pointers only; elements are added by JS) ── */
+    .pixel-cursor {
       position: fixed;
       top: 0;
       left: 0;
+      width: 0;
+      height: 0;
       pointer-events: none;
       z-index: 9999;
       opacity: 0;
-    }
-
-    .cursor-dot {
-      width: 6px;
-      height: 6px;
-      margin: -3px 0 0 -3px;
-      border-radius: 50%;
-      background: var(--ink);
-      transition: opacity 0.25s ease, scale 0.25s ease;
-    }
-
-    .cursor-ring {
-      width: 0;
-      height: 0;
       transition: opacity 0.25s ease;
     }
 
-    .cursor-ring-shape {
+    .pixel-cursor svg {
       position: absolute;
       top: 0;
       left: 0;
-      width: 32px;
-      height: 32px;
-      border: 1px solid var(--ink);
-      border-radius: 999px;
-      background-color: transparent;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transform: translate(-50%, -50%);
-      transition: width 0.25s ease, height 0.25s ease, transform 0.25s ease,
-                  background-color 0.25s ease, scale 0.15s ease;
+      display: block;
     }
 
-    .cursor-label {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--paper);
-      white-space: nowrap;
-      opacity: 0;
-      transition: opacity 0.2s ease;
+    .pixel-cursor .px-o { fill: var(--paper); }
+    .pixel-cursor .px-i { fill: var(--ink); }
+
+    .pixel-cursor .pixel-hand {
+      left: -12px; /* fingertip sits on the pointer */
+      display: none;
     }
+
+    .pixel-label {
+      position: absolute;
+      left: 26px;
+      top: 20px;
+      display: none;
+      font-family: 'Silkscreen', var(--mono);
+      font-size: 8px;
+      line-height: 1;
+      letter-spacing: 0.05em;
+      color: var(--paper);
+      background: var(--pixel);
+      padding: 5px 6px 4px;
+      box-shadow: 1px 1px 0 var(--ink), 2px 2px 0 var(--ink);
+      white-space: nowrap;
+      transform-origin: 0 0;
+    }
+
+    .pixel-bit {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 4px;
+      background: var(--ink);
+      pointer-events: none;
+      z-index: 9998;
+      scale: 0;
+    }
+
+    .pixel-bit.is-blue { background: var(--pixel); }
+    .pixel-bit.is-trail { animation: pixel-fade 400ms steps(1, end) forwards; }
+    .pixel-bit.is-burst { animation: pixel-burst 320ms steps(1, end) forwards; }
 
     html.has-cursor,
     html.has-cursor * { cursor: none !important; }
@@ -571,29 +579,49 @@
     html.has-cursor .contact-form input,
     html.has-cursor .contact-form textarea { cursor: text !important; }
 
-    html.cursor-visible .cursor-dot,
-    html.cursor-visible .cursor-ring { opacity: 1; }
+    html.cursor-visible .pixel-cursor { opacity: 1; }
+    html.cursor-over-field .pixel-cursor { opacity: 0; }
 
-    html.cursor-over-field .cursor-dot,
-    html.cursor-over-field .cursor-ring { opacity: 0; }
-
-    html.cursor-link .cursor-dot { scale: 0; }
-    html.cursor-link .cursor-ring-shape { width: 56px; height: 56px; }
-
-    html.cursor-view .cursor-ring-shape {
-      width: 72px;
-      height: 26px;
-      transform: translate(14px, -50%);
-      background-color: var(--ink);
+    html.cursor-link .pixel-arrow { display: none; }
+    html.cursor-link .pixel-hand {
+      display: block;
+      animation: pixel-bob 0.5s steps(1, end) infinite;
     }
-    html.cursor-view .cursor-label { opacity: 1; }
 
-    html.cursor-down .cursor-ring-shape { scale: 0.8; }
+    html.cursor-view .pixel-label {
+      display: block;
+      animation: pixel-pop 150ms steps(1, end) both;
+    }
+
+    @keyframes pixel-bob {
+      0%   { transform: translateY(0); }
+      50%  { transform: translateY(-1px); }
+      100% { transform: translateY(0); }
+    }
+
+    @keyframes pixel-pop {
+      0%       { scale: 0; }
+      33%      { scale: 0.6; }
+      66%, 100% { scale: 1; }
+    }
+
+    @keyframes pixel-fade {
+      0%   { scale: 1; }
+      50%  { scale: 0.5; }
+      100% { scale: 0; }
+    }
+
+    @keyframes pixel-burst {
+      0%   { scale: 1; transform: translate(0, 0); }
+      25%  { transform: translate(calc(var(--dx) / 3), calc(var(--dy) / 3)); }
+      50%  { transform: translate(calc(var(--dx) * 2 / 3), calc(var(--dy) * 2 / 3)); }
+      75%  { transform: translate(var(--dx), var(--dy)); }
+      100% { scale: 0; transform: translate(var(--dx), var(--dy)); }
+    }
 
     @media (prefers-reduced-motion: reduce) {
-      .cursor-dot { transition: opacity 0.25s ease; }
-      .cursor-ring-shape,
-      .cursor-label { transition: none; }
+      html.cursor-link .pixel-hand,
+      html.cursor-view .pixel-label { animation: none; }
     }
   </style>
 </head>
@@ -892,31 +920,110 @@
 </div>
 
 <script>
-  // Custom cursor — only on devices with a fine pointer that can hover
+  // Pixel cursor — only on devices with a fine pointer that can hover
   (function () {
     if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
 
     const root = document.documentElement;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-    const dot = document.createElement('div');
-    dot.className = 'cursor-dot';
-    dot.setAttribute('aria-hidden', 'true');
-    const ring = document.createElement('div');
-    ring.className = 'cursor-ring';
-    ring.setAttribute('aria-hidden', 'true');
-    ring.innerHTML = '<div class="cursor-ring-shape"><span class="cursor-label">View ↗</span></div>';
-    document.body.append(ring, dot);
+    // O = paper outline, I = ink fill; each cell renders at 2px
+    const ARROW = [
+      'O...........',
+      'OO..........',
+      'OIO.........',
+      'OIIO........',
+      'OIIIO.......',
+      'OIIIIO......',
+      'OIIIIIO.....',
+      'OIIIIIIO....',
+      'OIIIIIIIO...',
+      'OIIIIIIIIO..',
+      'OIIIIIIIIIO.',
+      'OIIIIIIOOOOO',
+      'OIIIOIIO....',
+      'OIIOOIIO....',
+      'OIO..OIIO...',
+      'OO...OIIO...',
+      'O.....OIIO..',
+      '......OIIO..',
+      '.......OO...',
+    ];
+    const HAND = [
+      '.....OO.........',
+      '....OIIO........',
+      '....OIIO........',
+      '....OIIO........',
+      '....OIIO........',
+      '....OIIOOO......',
+      '....OIIOIIOOO...',
+      '....OIIOIIOIIOO.',
+      '.OO.OIIOIIOIIOIO',
+      'OIIOOIIIIIIIIOIO',
+      'OIIIOIIIIIIIIIIO',
+      '.OIIIIIIIIIIIIIO',
+      '..OIIIIIIIIIIIIO',
+      '..OIIIIIIIIIIIO.',
+      '...OIIIIIIIIIIO.',
+      '...OIIIIIIIIIO..',
+      '....OIIIIIIIIO..',
+      '....OIIIIIIIIO..',
+      '....OOOOOOOOOO..',
+    ];
+
+    function pixelSvg(rows, cls) {
+      let outline = '', fill = '';
+      rows.forEach((row, y) => [...row].forEach((c, x) => {
+        const cell = `M${x * 2} ${y * 2}h2v2h-2z`;
+        if (c === 'O') outline += cell;
+        else if (c === 'I') fill += cell;
+      }));
+      const w = rows[0].length * 2, h = rows.length * 2;
+      return `<svg class="${cls}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges">` +
+        `<path class="px-o" d="${outline}"/><path class="px-i" d="${fill}"/></svg>`;
+    }
+
+    const cursor = document.createElement('div');
+    cursor.className = 'pixel-cursor';
+    cursor.setAttribute('aria-hidden', 'true');
+    cursor.innerHTML = pixelSvg(ARROW, 'pixel-arrow') + pixelSvg(HAND, 'pixel-hand') +
+      '<span class="pixel-label">View ↗</span>';
+
+    // Fixed pools, reused round-robin — the trail pool size is the on-screen cap
+    function makeBits(n) {
+      return Array.from({ length: n }, () => {
+        const el = document.createElement('div');
+        el.className = 'pixel-bit';
+        el.setAttribute('aria-hidden', 'true');
+        document.body.append(el);
+        return el;
+      });
+    }
+    const trail = makeBits(30);
+    const burst = makeBits(8);
+    document.body.append(cursor);
     root.classList.add('has-cursor');
 
-    let mx = 0, my = 0, rx = 0, ry = 0, seen = false;
+    const BURST_DIRS = [[0, -24], [18, -18], [24, 0], [18, 18], [0, 24], [-18, 18], [-24, 0], [-18, -18]];
+    const snap = v => Math.floor(v / 4) * 4;
+
+    function play(el, cls, x, y, blue) {
+      el.className = 'pixel-bit';
+      el.style.translate = `${x}px ${y}px`;
+      void el.offsetWidth; // restart the animation
+      el.className = `pixel-bit ${cls}${blue ? ' is-blue' : ''}`;
+    }
+
+    let mx = 0, my = 0, lastX = 0, lastY = 0, travel = 0, nextBit = 0;
+    let seen = false, overField = false;
 
     function setState(target) {
       if (!target || !target.closest) return;
       const field = target.closest('.contact-form input, .contact-form textarea');
       const row = !field && target.closest('.work-item');
       const link = !field && !row && target.closest('a, button');
-      root.classList.toggle('cursor-over-field', !!field);
+      overField = !!field;
+      root.classList.toggle('cursor-over-field', overField);
       root.classList.toggle('cursor-view', !!row);
       root.classList.toggle('cursor-link', !!link);
     }
@@ -925,10 +1032,19 @@
       if (e.pointerType === 'touch') return;
       mx = e.clientX;
       my = e.clientY;
-      if (!seen) { rx = mx; ry = my; seen = true; }
-      dot.style.translate = `${mx}px ${my}px`;
+      cursor.style.translate = `${Math.round(mx)}px ${Math.round(my)}px`;
       root.classList.add('cursor-visible');
       setState(e.target);
+
+      if (!seen) { lastX = mx; lastY = my; seen = true; return; }
+      travel += Math.hypot(mx - lastX, my - lastY);
+      lastX = mx;
+      lastY = my;
+      if (travel < 12) return;
+      travel = 0;
+      if (overField || reduceMotion.matches) return;
+      play(trail[nextBit], 'is-trail', snap(mx), snap(my), Math.random() < 1 / 6);
+      nextBit = (nextBit + 1) % trail.length;
     });
 
     // Content moves under a still pointer while scrolling
@@ -937,21 +1053,18 @@
     }, { passive: true });
 
     document.addEventListener('mouseout', e => {
-      if (!e.relatedTarget) root.classList.remove('cursor-visible', 'cursor-down');
+      if (!e.relatedTarget) root.classList.remove('cursor-visible');
     });
 
-    document.addEventListener('mousedown', () => {
-      if (!reduceMotion.matches) root.classList.add('cursor-down');
+    document.addEventListener('mousedown', e => {
+      if (e.button !== 0 || overField || reduceMotion.matches) return;
+      const x = Math.round(e.clientX) - 2, y = Math.round(e.clientY) - 2;
+      burst.forEach((el, i) => {
+        el.style.setProperty('--dx', `${BURST_DIRS[i][0]}px`);
+        el.style.setProperty('--dy', `${BURST_DIRS[i][1]}px`);
+        play(el, 'is-burst', x, y, i % 2 === 1);
+      });
     });
-    document.addEventListener('mouseup', () => root.classList.remove('cursor-down'));
-
-    (function loop() {
-      const ease = reduceMotion.matches ? 1 : 0.15;
-      rx += (mx - rx) * ease;
-      ry += (my - ry) * ease;
-      ring.style.translate = `${rx}px ${ry}px`;
-      requestAnimationFrame(loop);
-    })();
   })();
 </script>
 
