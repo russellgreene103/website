@@ -1088,53 +1088,116 @@ const retroTerminal = (function () {
   });
 })();
 
-// Typed section labels: each types itself out the first time it scrolls into view. The real text
-// stays in place (transparent) for screen readers and layout; an aria-hidden copy does the typing.
+// DOS section labels, in two variants chosen with ?labels=prompt (default) or ?labels=titlebar.
+// prompt: a command types out, then its one-line result appears. titlebar: an inverted DOS title
+// bar draws in, then its text types. Screen readers (and no-JS visitors) get the plain label text.
 (function () {
   const labels = [...document.querySelectorAll('.section-label')];
+  if (!labels.length) return;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  if (!labels.length || reduceMotion.matches || !('IntersectionObserver' in window)) return;
-  const CHAR_MS = 40, CURSOR_LINGER_MS = 600;
+  const variant = new URLSearchParams(location.search).get('labels') === 'titlebar' ? 'titlebar' : 'prompt';
+  const CHAR_MS = 40, OPEN_MS = 120, CURSOR_LINGER_MS = 600;
 
+  // Counts come from the label's own section
+  const count = (label, sel) => (label.closest('section, .projects-section') || document).querySelectorAll(sel).length;
+  const files = (label, sel) => `${count(label, sel)} FILE(S)`;
+  const LABELS = {
+    'core expertise': { cmd: 'TYPE EXPERTISE.TXT', result: l => `${count(l, '.expertise-item')} SKILLS`, title: 'Core Expertise' },
+    'selected work': { cmd: 'DIR WORK', result: l => files(l, '.work-item'), title: 'Selected Work' },
+    'selected partners': { cmd: 'DIR PARTNERS', result: l => files(l, '.partner-name'), title: 'Partners' },
+    'get in touch': { cmd: 'MAIL RUSSELL', result: () => 'READY', title: 'Get in Touch' },
+    'all projects': { cmd: 'DIR VIBE', result: l => files(l, '.project-item'), title: 'All Projects' },
+  };
+
+  const el = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text) node.textContent = text;
+    return node;
+  };
+  const cursor = () => el('b', 'block-cursor');
+
+  function build(label) {
+    // Line breaks in the markup (Core<br>Expertise) count as spaces
+    const plain = [...label.childNodes].map(n => n.nodeName === 'BR' ? ' ' : n.textContent).join('').replace(/\s+/g, ' ').trim();
+    const spec = LABELS[plain.toLowerCase()] || { cmd: plain.toUpperCase(), result: () => 'OK', title: plain };
+    const visual = el('span', `dos-label dos-label-${variant}`);
+    visual.setAttribute('aria-hidden', 'true');
+    let typeTarget, typeText, afterTyping = () => {};
+
+    if (variant === 'prompt') {
+      const line = el('span', 'dl-line');
+      const cmd = el('span', 'dl-cmd');
+      const result = el('span', 'dl-result', spec.result(label));
+      line.append(el('span', 'dl-prompt', 'C:\\>'), ' ', cmd);
+      visual.append(line, result);
+      typeTarget = cmd;
+      typeText = spec.cmd;
+      afterTyping = () => visual.classList.add('is-done');
+    } else {
+      // A hidden full-width copy sizes the bar, so it doesn't grow while its text types
+      const text = el('span', 'dl-text');
+      const ghost = el('span', 'dl-ghost', spec.title);
+      ghost.append(cursor());
+      const typed = el('span', 'dl-typed');
+      text.append(ghost, typed);
+      visual.append(el('span', 'dl-close', '[■]'), text);
+      typeTarget = typed;
+      typeText = spec.title;
+    }
+
+    const sr = el('span', 'dl-sr', plain);
+    label.textContent = '';
+    label.append(sr, visual);
+    label.classList.add('has-dos-label');
+    return { visual, typeTarget, typeText, afterTyping };
+  }
+
+  function type({ visual, typeTarget, typeText, afterTyping }) {
+    const c = cursor();
+    let i = 0;
+    typeTarget.append(c);
+    const timer = setInterval(() => {
+      i++;
+      typeTarget.textContent = typeText.slice(0, i);
+      typeTarget.append(c);
+      if (i < typeText.length) return;
+      clearInterval(timer);
+      afterTyping();
+      setTimeout(() => c.remove(), CURSOR_LINGER_MS);
+    }, CHAR_MS);
+  }
+
+  function reveal(parts) {
+    parts.visual.classList.add('is-shown');
+    if (variant === 'titlebar') {
+      parts.visual.classList.add('is-opening');
+      setTimeout(() => type(parts), OPEN_MS);
+    } else type(parts);
+  }
+
+  const built = new Map(labels.map(label => [label, build(label)]));
+
+  // Reduced motion (or no IntersectionObserver): everything drawn at once
+  if (reduceMotion.matches || !('IntersectionObserver' in window)) {
+    for (const parts of built.values()) {
+      parts.typeTarget.textContent = parts.typeText;
+      parts.visual.classList.add('is-shown', 'is-done');
+    }
+    return;
+  }
+
+  // Watch the DOS copy itself: the label element can stretch to its whole grid row (taller than
+  // the viewport), which would never reach the threshold
+  const byVisual = new Map([...built.values()].map(parts => [parts.visual, parts]));
   const io = new IntersectionObserver(entries => {
     for (const entry of entries) {
       if (!entry.isIntersecting) continue;
       io.unobserve(entry.target);
-      type(entry.target);
+      reveal(byVisual.get(entry.target));
     }
   }, { threshold: 0.6 });
-
-  labels.forEach(label => {
-    const original = label.innerHTML;
-    const text = [...label.childNodes].map(n => n.nodeName === 'BR' ? '\n' : n.textContent).join('')
-      .split('\n').map(line => line.trim()).join('\n');
-    label.innerHTML = `<span class="type-source">${original}</span><span class="type-visual" aria-hidden="true"></span>`;
-    label.classList.add('type-ready');
-    label.dataset.typeOriginal = original;
-    label.dataset.typeText = text;
-    io.observe(label);
-  });
-
-  function type(label) {
-    const visual = label.querySelector('.type-visual');
-    const text = label.dataset.typeText;
-    const cursor = document.createElement('b');
-    cursor.className = 'block-cursor';
-    let i = 0;
-    const timer = setInterval(() => {
-      i++;
-      visual.textContent = text.slice(0, i);
-      visual.append(cursor);
-      if (i < text.length) return;
-      clearInterval(timer);
-      setTimeout(() => {
-        label.innerHTML = label.dataset.typeOriginal;
-        label.classList.remove('type-ready');
-        delete label.dataset.typeOriginal;
-        delete label.dataset.typeText;
-      }, CURSOR_LINGER_MS);
-    }, CHAR_MS);
-  }
+  byVisual.forEach((parts, visual) => io.observe(visual));
 })();
 
 // Partner sequence: a DOS menu selection bar steps through the names once, the first time they're seen
@@ -1160,8 +1223,8 @@ const retroTerminal = (function () {
   io.observe(section);
 })();
 
-// Core expertise readout: hovering (or tapping, or focusing) a skill types its description
-// into a DOS-style panel under the grid, followed by links to related work
+// Core expertise readout: resting on a skill (or tapping, clicking to pin, or focusing it) shows
+// its related work and types its description into a DOS-style panel under the grid
 (function () {
   const section = document.querySelector('.expertise');
   const items = section ? [...section.querySelectorAll('.expertise-item')] : [];
@@ -1196,13 +1259,12 @@ const retroTerminal = (function () {
     };
   }
 
-  // Fill a panel for a skill (or the idle prompt), showing `typed` characters of the description
-  function fill(target, item, typed = Infinity) {
+  // Fill a panel for a skill (or the idle prompt). The SEE links show right away; only the
+  // description types, so `typed` limits just that line.
+  function fill(target, item, { typed = Infinity, pinned = false } = {}) {
     const prompt = target.querySelector('.xp-prompt');
-    const text = target.querySelector('.xp-text');
     const see = target.querySelector('.xp-see');
     prompt.textContent = '';
-    text.textContent = '';
     see.textContent = '';
     if (!item) {
       prompt.append('C:\\EXPERTISE>', cursor());
@@ -1210,14 +1272,26 @@ const retroTerminal = (function () {
       hint.className = 'xp-hint';
       hint.textContent = canHover ? 'hover a skill' : 'tap a skill';
       prompt.append(hint);
+      setText(target, '', false);
       return;
     }
     const { dir, desc, links } = skill(item);
-    prompt.textContent = `C:\\EXPERTISE\\${dir}>`;
-    text.append(desc.slice(0, typed), cursor());
-    if (typed < desc.length) return;
+    prompt.append(`C:\\EXPERTISE\\${dir}>`);
+    if (pinned) {
+      const mark = document.createElement('span');
+      mark.className = 'xp-pinned';
+      mark.textContent = '[PINNED]';
+      prompt.append(mark);
+    }
+    setText(target, desc.slice(0, typed), true);
     see.append('SEE: ');
     links.forEach((a, i) => see.append(i ? ', ' : '', a.cloneNode(true)));
+  }
+
+  function setText(target, text, withCursor) {
+    const el = target.querySelector('.xp-text');
+    el.textContent = text;
+    if (withCursor) el.append(cursor());
   }
 
   // Fixed height: the tallest of all states at the current width, so hovering never shifts layout
@@ -1229,20 +1303,35 @@ const retroTerminal = (function () {
     panel.parentNode.append(probe);
     let tallest = 0;
     for (const item of [null, ...items]) {
-      fill(probe, item);
+      fill(probe, item, { pinned: !!item });
       tallest = Math.max(tallest, probe.offsetHeight);
     }
     probe.remove();
     panel.style.height = `${tallest}px`;
   }
 
-  let current = null, typeTimer = 0;
+  let shown = null, pinned = null, typeTimer = 0;
 
-  function select(item) {
-    if (item === current) return;
-    current = item;
+  // Put a skill (or the idle prompt) on the panel. Re-showing the same skill only refreshes
+  // the prompt line, so pinning or unpinning never restarts the typing.
+  function show(item) {
+    items.forEach(i => {
+      i.classList.toggle('is-selected', i === item);
+      if (canHover) i.setAttribute('aria-pressed', String(i === pinned));
+    });
+    if (item === shown) {
+      const prompt = panel.querySelector('.xp-prompt');
+      const mark = prompt.querySelector('.xp-pinned');
+      if (item && pinned === item && !mark) {
+        const m = document.createElement('span');
+        m.className = 'xp-pinned';
+        m.textContent = '[PINNED]';
+        prompt.append(m);
+      } else if (mark && pinned !== item) mark.remove();
+      return;
+    }
+    shown = item;
     clearInterval(typeTimer);
-    items.forEach(i => i.classList.toggle('is-selected', i === item));
     const announce = panel.querySelector('.xp-announce');
     if (!item) {
       announce.textContent = '';
@@ -1251,14 +1340,19 @@ const retroTerminal = (function () {
     }
     const { name, desc } = skill(item);
     announce.textContent = `${name}: ${desc}`;
-    if (reduceMotion.matches) { fill(panel, item); return; }
+    if (reduceMotion.matches) { fill(panel, item, { pinned: pinned === item }); return; }
     let typed = 0;
-    fill(panel, item, 0);
+    fill(panel, item, { typed: 0, pinned: pinned === item });
     typeTimer = setInterval(() => {
       typed++;
-      fill(panel, item, typed);
+      setText(panel, desc.slice(0, typed), true);
       if (typed >= desc.length) clearInterval(typeTimer);
     }, CHAR_MS);
+  }
+
+  function pin(item) {
+    pinned = item;
+    show(item || shown);
   }
 
   fill(panel, null);
@@ -1272,19 +1366,48 @@ const retroTerminal = (function () {
   }).observe(panel.parentNode);
   document.fonts.ready.then(measure);
 
-  let pointerFocus = false;
+  // Hover intent: a skill only takes over the panel after the pointer rests on it, never while
+  // the pointer is inside the panel, and never while another skill is pinned
+  const INTENT_MS = 150;
+  let intentTimer = 0, overPanel = false;
+  panel.addEventListener('mouseenter', () => { overPanel = true; clearTimeout(intentTimer); });
+  panel.addEventListener('mouseleave', () => { overPanel = false; });
+
+  let pointerFocus = false, focusPinned = null;
   items.forEach(item => {
-    if (canHover) item.addEventListener('mouseenter', () => select(item));
+    if (canHover) {
+      item.addEventListener('mouseenter', () => {
+        clearTimeout(intentTimer);
+        intentTimer = setTimeout(() => {
+          if (!pinned && !overPanel) show(item);
+        }, INTENT_MS);
+      });
+      item.addEventListener('mouseleave', () => clearTimeout(intentTimer));
+    }
     item.addEventListener('pointerdown', () => { pointerFocus = true; });
-    // Keyboard focus updates the panel; focus that comes from a click or tap is left to the click
+    // Keyboard focus pins the focused skill; focus that comes from a click or tap is left to the click
     item.addEventListener('focus', () => {
-      if (!pointerFocus) select(item);
-      pointerFocus = false;
+      if (pointerFocus) { pointerFocus = false; return; }
+      focusPinned = item;
+      pin(item);
     });
-    item.addEventListener('click', () => {
+    item.addEventListener('blur', () => {
+      if (focusPinned !== item) return;
+      focusPinned = null;
+      if (pinned === item) pin(null);
+    });
+    item.addEventListener('click', e => {
       pointerFocus = false;
-      // On touch, tapping the selected skill again returns to the idle prompt
-      select(!canHover && item === current ? null : item);
+      clearTimeout(intentTimer);
+      if (!canHover) {
+        // Touch: tapping the shown skill again returns to the idle prompt
+        show(item === shown ? null : item);
+        return;
+      }
+      // A keyboard "click" (Enter/Space) arrives with detail 0; keep it pinned rather than toggling off
+      if (e.detail === 0 && pinned === item) return;
+      focusPinned = null;
+      pin(pinned === item ? null : item);
     });
   });
 })();

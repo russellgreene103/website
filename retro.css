@@ -199,16 +199,58 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 .prompt-clock { cursor: pointer; }
 .prompt-clock:focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }
 
-/* Typed section labels: the real text holds its place invisibly while a copy types over it */
-.section-label.type-ready { position: relative; }
-.type-ready .type-source { color: transparent; }
+/* DOS section labels (see retro.js): the plain text stays for screen readers; the DOS copy is visual */
+.section-label.has-dos-label { position: relative; }
 
-.type-visual {
+.dl-sr {
   position: absolute;
-  inset: 0;
-  padding: inherit;
-  white-space: pre;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
+
+.dos-label { display: block; visibility: hidden; }
+.dos-label.is-shown { visibility: visible; }
+
+/* Variant: prompt. A command line, then its result as output */
+.dos-label-prompt .dl-line { display: block; white-space: nowrap; }
+.dl-prompt { color: var(--pixel); }
+.dl-cmd { color: var(--ink); }
+
+.dl-result {
+  display: block;
+  color: var(--mid);
+  visibility: hidden;
+}
+
+.dos-label-prompt.is-done .dl-result { visibility: visible; }
+
+/* Variant: titlebar. An inverted DOS title bar with a close box */
+.dos-label-titlebar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px 4px;
+  background: var(--pixel);
+  color: var(--paper);
+  box-shadow: 6px 6px 0 var(--ink);
+  font-family: 'Silkscreen', var(--mono);
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform-origin: left top;
+}
+
+.dos-label-titlebar.is-opening { animation: dos-open 120ms steps(1, end) both; }
+
+.dos-label-titlebar .dl-text { display: inline-grid; }
+.dl-ghost,
+.dl-typed { grid-area: 1 / 1; }
+.dl-ghost { visibility: hidden; }
 
 /* Partner sequence: one name lit at a time, with hard cuts */
 .partners.is-sequencing .partner-name { transition: none; }
@@ -337,6 +379,12 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 .xp-prompt {
   color: var(--ink);
   letter-spacing: 0.06em;
+}
+
+.xp-pinned {
+  margin-left: 10px;
+  color: var(--pixel);
+  letter-spacing: 0.1em;
 }
 
 .xp-hint {
