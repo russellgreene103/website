@@ -1,5 +1,13 @@
 // Retro effects shared by the homepage and /vibe. Each feature sets itself up only if its elements exist.
 
+const textOf = (el, sel) => el.querySelector(sel).textContent.trim();
+
+// A /vibe project's name without its Local badge
+function projectName(row) {
+  return [...row.querySelector('.project-name').childNodes]
+    .filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent).join('').trim();
+}
+
 // Pixel cursor — only on devices with a fine pointer that can hover
 (function () {
   if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
@@ -130,7 +138,6 @@
   // DOS preview window: follows the pointer over list rows and types out the row's details
   const OPEN_MS = 120, TYPE_MS = 150;
   const pad = n => String(n).padStart(2, '0');
-  const textOf = (row, sel) => row.querySelector(sel).textContent.trim();
   // Each row type: how to find it, its link, and what the window says about it
   const ROW_TYPES = [
     {
@@ -145,9 +152,7 @@
       selector: '.project-item',
       link: '.project-link',
       describe: row => {
-        // The Local badge sits inside the name, so read only the name's own text
-        const name = [...row.querySelector('.project-name').childNodes]
-          .filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent).join('').trim();
+        const name = projectName(row);
         const local = !!row.querySelector('.badge-local');
         return { name, fields: [['Project:', name], ['URL:', textOf(row, '.project-url')]], notes: local ? ['Local network only'] : [] };
       },
@@ -270,7 +275,7 @@
     if (!target || !target.closest) return;
     const field = target.closest('input, textarea');
     const row = !field && target.closest(ROW_SELECTOR);
-    const link = !field && (row || target.closest('a, button'));
+    const link = !field && (row || target.closest('a, button, [role="button"]'));
     overField = !!field;
     root.classList.toggle('cursor-over-field', overField);
     root.classList.toggle('cursor-link', !!link);
@@ -615,4 +620,362 @@
       stepRadius(open ? Math.hypot(img.clientWidth, img.clientHeight) : 0, 4, 200);
     });
   }
+})();
+
+// Hidden DOS terminal — backtick anywhere (outside form fields) or the prompt clock opens it
+const retroTerminal = (function () {
+  const root = document.documentElement;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const PROMPT = 'C:\\>';
+  const LINKEDIN = 'https://www.linkedin.com/in/russellgreene/';
+  const CLOSE_MS = 120;
+  const nyc = opts => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', ...opts });
+
+  let overlay, screen, output, input, typed, closeBox;
+  let isOpen = false, booted = false, lastFocus = null, closeTimer = 0;
+  const history = [];
+  let historyAt = 0;
+
+  function build() {
+    overlay = document.createElement('div');
+    overlay.className = 'dos-term-overlay';
+    overlay.hidden = true;
+    overlay.innerHTML =
+      '<div class="dos-term" role="dialog" aria-modal="true" aria-labelledby="dos-term-title">' +
+        '<div class="dos-term-frame">' +
+          '<div class="dos-term-title">' +
+            '<button type="button" class="dos-term-close" aria-label="Close terminal">[■]</button>' +
+            '<span id="dos-term-title">C:\\RUSSELL\\COMMAND.COM</span>' +
+          '</div>' +
+          '<div class="dos-term-screen">' +
+            '<div class="dos-term-output" aria-live="polite"></div>' +
+            '<div class="dos-term-line">' +
+              '<span class="dos-term-prompt" aria-hidden="true"></span>' +
+              '<span class="dos-term-typed" aria-hidden="true"></span>' +
+              '<b class="block-cursor" aria-hidden="true"></b>' +
+              '<input class="dos-term-input" type="text" aria-label="Command" autocomplete="off" ' +
+                'autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go">' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.append(overlay);
+    screen = overlay.querySelector('.dos-term-screen');
+    output = overlay.querySelector('.dos-term-output');
+    input = overlay.querySelector('.dos-term-input');
+    typed = overlay.querySelector('.dos-term-typed');
+    closeBox = overlay.querySelector('.dos-term-close');
+    overlay.querySelector('.dos-term-prompt').textContent = PROMPT;
+
+    closeBox.addEventListener('click', close);
+    // The visible line mirrors the (transparent) input, so the block cursor always sits at the end
+    input.addEventListener('input', () => { typed.textContent = input.value; });
+    input.addEventListener('keydown', onInputKey);
+    screen.addEventListener('click', () => input.focus());
+    // Keep focus inside the dialog: Tab moves between the close box and the input
+    overlay.addEventListener('keydown', e => {
+      if (e.key !== 'Tab') return;
+      e.preventDefault();
+      (document.activeElement === input ? closeBox : input).focus();
+    });
+  }
+
+  function print(...lines) {
+    for (const line of lines) {
+      const div = document.createElement('div');
+      div.textContent = line;
+      output.append(div);
+    }
+    screen.scrollTop = screen.scrollHeight;
+  }
+
+  function setInput(value) {
+    input.value = value;
+    typed.textContent = value;
+  }
+
+  function onInputKey(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const line = input.value;
+      setInput('');
+      print(PROMPT + line);
+      if (line.trim()) {
+        history.push(line);
+        historyAt = history.length;
+      }
+      run(line);
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      if (!history.length) return;
+      e.preventDefault();
+      historyAt = Math.max(0, Math.min(history.length, historyAt + (e.key === 'ArrowUp' ? -1 : 1)));
+      setInput(history[historyAt] || '');
+    }
+  }
+
+  function open() {
+    if (!overlay) build();
+    clearTimeout(closeTimer);
+    if (!isOpen) {
+      isOpen = true;
+      lastFocus = document.activeElement;
+      overlay.hidden = false;
+      overlay.classList.remove('is-closing');
+      overlay.classList.add('is-open');
+      if (!booted) {
+        booted = true;
+        print('RUSSELL-DOS Version 6.22', '(C)Copyright Russell Greene 1981-2026.', '', 'Type HELP for a list of commands.', '');
+      }
+    }
+    input.focus(); // synchronous, so touch devices raise the on-screen keyboard
+  }
+
+  function close() {
+    if (!isOpen) return;
+    isOpen = false;
+    overlay.classList.remove('is-open');
+    const finish = () => { overlay.hidden = true; overlay.classList.remove('is-closing'); };
+    if (reduceMotion.matches) finish();
+    else {
+      overlay.classList.add('is-closing');
+      closeTimer = setTimeout(finish, CLOSE_MS);
+    }
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  // What DIR lists: the work list on the homepage, the vibe projects once /vibe is unlocked
+  function listing() {
+    if (document.getElementById('gate') && !document.querySelector('#content.visible')) return null;
+    const work = [...document.querySelectorAll('.work-item')];
+    if (work.length) {
+      return { dir: 'C:\\WORK', ext: 'PRJ', items: work.map(r => ({ title: textOf(r, '.work-title'), href: r.querySelector('.work-link').href })) };
+    }
+    const vibe = [...document.querySelectorAll('.project-item')];
+    return { dir: 'C:\\VIBE', ext: 'EXE', items: vibe.map(r => ({ title: projectName(r), href: r.querySelector('.project-link').href })) };
+  }
+
+  // 8.3 names: up to eight characters, or six plus ~N when the name is longer
+  function shortNames(items) {
+    const used = new Set();
+    return items.map(({ title }) => {
+      const base = title.toUpperCase().replace(/[^A-Z0-9]/g, '') || 'FILE';
+      if (base.length <= 8 && !used.has(base)) { used.add(base); return base; }
+      let n = 1;
+      while (used.has(`${base.slice(0, 6)}~${n}`)) n++;
+      const name = `${base.slice(0, 6)}~${n}`;
+      used.add(name);
+      return name;
+    });
+  }
+
+  // Stable pseudo-random numbers from a title, so sizes and dates don't change between visits
+  function hash(str) {
+    let h = 2166136261;
+    for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    return h >>> 0;
+  }
+
+  function dir() {
+    const list = listing();
+    if (!list) { print('Access denied'); return; }
+    const names = shortNames(list.items);
+    let total = 0;
+    print(' Volume in drive C is RUSSELL', ` Directory of ${list.dir}`, '');
+    list.items.forEach((item, i) => {
+      const h = hash(item.title);
+      const size = 4096 + (h % 190) * 512;
+      total += size;
+      const d = hash(`${item.title}:date`);
+      const month = String(1 + d % 12).padStart(2, '0');
+      const day = String(1 + (d >>> 4) % 28).padStart(2, '0');
+      const year = String(19 + (d >>> 9) % 7);
+      const hour = 1 + (d >>> 12) % 12, minute = String((d >>> 16) % 60).padStart(2, '0');
+      const ampm = (d >>> 22) % 2 ? 'p' : 'a';
+      print(`${String(i + 1).padStart(2)}  ${names[i].padEnd(8)} ${list.ext} ${size.toLocaleString('en-US').padStart(7)}  ` +
+        `${month}-${day}-${year}  ${String(hour).padStart(2)}:${minute}${ampm}`);
+    });
+    print(`${String(list.items.length).padStart(9)} file(s) ${total.toLocaleString('en-US').padStart(11)} bytes`, '', 'Type OPEN N to open a file.');
+  }
+
+  function openItem(arg) {
+    const list = listing();
+    if (!list) { print('Access denied'); return; }
+    const item = list.items[parseInt(arg, 10) - 1];
+    if (!item) { print('File not found'); return; }
+    print(`Opening ${item.title}...`);
+    window.open(item.href, '_blank', 'noopener');
+  }
+
+  function time() {
+    const now = new Date();
+    const parts = Object.fromEntries(nyc({ weekday: 'short', month: '2-digit', day: '2-digit', year: 'numeric' })
+      .formatToParts(now).map(p => [p.type, p.value]));
+    print(`Current time is ${nyc({ hour: 'numeric', minute: '2-digit', second: '2-digit' }).format(now)} (New York)`,
+      `Current date is ${parts.weekday} ${parts.month}-${parts.day}-${parts.year}`);
+  }
+
+  function win() {
+    print('Starting Windows 3.1...');
+    root.classList.add('cursor-wait');
+    setTimeout(() => {
+      root.classList.remove('cursor-wait');
+      print('Just kidding.');
+    }, 2000);
+  }
+
+  const COMMANDS = {
+    help: () => print(
+      'HELP      This list',
+      'DIR       List files',
+      'OPEN N    Open file N from DIR',
+      'WHOAMI    About Russell',
+      'CONTACT   Get in touch',
+      'LINKEDIN  Open LinkedIn',
+      'VIBE      Go to /vibe',
+      'HOME      Go to the homepage',
+      'TIME      New York time and date',
+      'VER       Version',
+      'CLS       Clear the screen',
+      'EXIT      Close the terminal',
+      '',
+      'Some commands are not listed here...'),
+    dir,
+    open: openItem,
+    whoami: () => print('RUSSELL GREENE', 'Executive Producer @ BUCK // NYC', '20+ years orchestrating complex productions for global brands.'),
+    contact: () => {
+      const contact = document.getElementById('contact');
+      if (!contact) { location.href = '/#contact'; return; }
+      close();
+      contact.scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+    },
+    linkedin: () => { print('Opening LinkedIn...'); window.open(LINKEDIN, '_blank', 'noopener'); },
+    vibe: () => { location.href = '/vibe'; },
+    home: () => { location.href = '/'; },
+    time,
+    ver: () => print('', 'RUSSELL-DOS Version 6.22', ''),
+    cls: () => { output.textContent = ''; },
+    exit: close,
+    win,
+    format: arg => print(/^c:?$/.test(arg) ? 'Nice try.' : 'Bad command or file name'),
+  };
+
+  function run(line) {
+    const [cmd = '', ...rest] = line.trim().toLowerCase().split(/\s+/);
+    if (!cmd) return;
+    const command = Object.hasOwn(COMMANDS, cmd) ? COMMANDS[cmd] : null;
+    if (command) command(rest.join(' '));
+    else print('Bad command or file name');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (isOpen) {
+      if (e.key === 'Escape') { e.preventDefault(); close(); }
+      return;
+    }
+    if (e.key !== '`' || e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t.isContentEditable || (t.closest && t.closest('input, textarea, select'))) return;
+    e.preventDefault();
+    open();
+  });
+
+  return { open };
+})();
+
+// Prompt-style clock in the hero meta line: C:\NYC> 9:27 AM, opens the terminal
+(function () {
+  const clock = document.querySelector('.prompt-clock');
+  if (!clock) return;
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+  clock.innerHTML = 'C:\\NYC&gt; <time></time><b class="block-cursor" aria-hidden="true"></b>';
+  clock.setAttribute('role', 'button');
+  clock.tabIndex = 0;
+  const time = clock.querySelector('time');
+
+  function tick() {
+    const now = new Date();
+    time.textContent = fmt.format(now);
+    clock.setAttribute('aria-label', `New York, ${fmt.format(now)}. Open terminal`);
+    setTimeout(tick, 60000 - (now.getTime() % 60000) + 50); // just after the next minute
+  }
+  tick();
+
+  clock.addEventListener('click', () => retroTerminal.open());
+  clock.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    retroTerminal.open();
+  });
+})();
+
+// Typed section labels: each types itself out the first time it scrolls into view. The real text
+// stays in place (transparent) for screen readers and layout; an aria-hidden copy does the typing.
+(function () {
+  const labels = [...document.querySelectorAll('.section-label')];
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (!labels.length || reduceMotion.matches || !('IntersectionObserver' in window)) return;
+  const CHAR_MS = 40, CURSOR_LINGER_MS = 600;
+
+  const io = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      io.unobserve(entry.target);
+      type(entry.target);
+    }
+  }, { threshold: 0.6 });
+
+  labels.forEach(label => {
+    const original = label.innerHTML;
+    const text = [...label.childNodes].map(n => n.nodeName === 'BR' ? '\n' : n.textContent).join('')
+      .split('\n').map(line => line.trim()).join('\n');
+    label.innerHTML = `<span class="type-source">${original}</span><span class="type-visual" aria-hidden="true"></span>`;
+    label.classList.add('type-ready');
+    label.dataset.typeOriginal = original;
+    label.dataset.typeText = text;
+    io.observe(label);
+  });
+
+  function type(label) {
+    const visual = label.querySelector('.type-visual');
+    const text = label.dataset.typeText;
+    const cursor = document.createElement('b');
+    cursor.className = 'block-cursor';
+    let i = 0;
+    const timer = setInterval(() => {
+      i++;
+      visual.textContent = text.slice(0, i);
+      visual.append(cursor);
+      if (i < text.length) return;
+      clearInterval(timer);
+      setTimeout(() => {
+        label.innerHTML = label.dataset.typeOriginal;
+        label.classList.remove('type-ready');
+        delete label.dataset.typeOriginal;
+        delete label.dataset.typeText;
+      }, CURSOR_LINGER_MS);
+    }, CHAR_MS);
+  }
+})();
+
+// Partner sequence: a DOS menu selection bar steps through the names once, the first time they're seen
+(function () {
+  const section = document.querySelector('.partners');
+  const names = section ? [...section.querySelectorAll('.partner-name')] : [];
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (!names.length || reduceMotion.matches || !('IntersectionObserver' in window)) return;
+  const STEP_MS = 120;
+
+  const io = new IntersectionObserver(entries => {
+    if (!entries.some(e => e.isIntersecting)) return;
+    io.disconnect();
+    section.classList.add('is-sequencing');
+    let i = 0;
+    const timer = setInterval(() => {
+      names.forEach((name, k) => name.classList.toggle('is-lit', k === i));
+      if (i++ < names.length) return;
+      clearInterval(timer);
+      section.classList.remove('is-sequencing');
+    }, STEP_MS);
+  }, { threshold: 0.5 });
+  io.observe(section);
 })();
