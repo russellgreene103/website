@@ -338,8 +338,9 @@ function projectName(row) {
   });
 })();
 
-// Retro headshot — the photo is DOS-dithered onto a canvas above it. Inside the reveal
-// circle a colour mosaic resolves tier by tier, then the cells clear to show the real photo.
+// Retro headshot — the photo is DOS-dithered onto a canvas above it. On hover (or tap) a colour
+// mosaic resolves tier by tier, then the cells clear to show the real photo. ?reveal=whole (default)
+// resolves the entire image; ?reveal=circle resolves a spotlight around the pointer.
 (function () {
   const wrap = document.querySelector('.hero-photo-wrap');
   const img = wrap && wrap.querySelector('.hero-photo');
@@ -352,6 +353,7 @@ function projectName(row) {
   const CELL = 4;                 // on-screen size of one dither pixel, in CSS px
   const REVEAL = 90;              // reveal radius, in CSS px
   const TIER_MS = 250;            // time per mosaic tier
+  const REVERSE_MS = 80;          // time per tier when a whole-image reveal steps back down
   const TIER_BLOCKS = [4, 2, 1];  // mosaic block size in cells (16px, 8px, 4px), then the real photo
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
   const INK = [14, 14, 14], GRAY = [154, 154, 154], PAPER = [245, 243, 239], BLUE = [31, 59, 214];
@@ -374,6 +376,11 @@ function projectName(row) {
   let cx = 0, cy = 0, radius = 0;       // reveal circle, CSS px relative to the photo
   let level = TIER_BLOCKS.length;       // current mosaic tier; TIER_BLOCKS.length = real photo
   let frame = 0, stepTimer = 0, tierTimer = 0;
+
+  const mode = new URLSearchParams(location.search).get('reveal') === 'circle' ? 'circle' : 'whole';
+  // Whole mode: 0 = dither, 1..TIER_BLOCKS.length = mosaic tiers, TIER_BLOCKS.length + 1 = real photo
+  const PHOTO_STAGE = TIER_BLOCKS.length + 1;
+  let stage = 0, stageTimer = 0;
 
   const isBlue = (r, g, b) => b - (r + g) / 2 > 70;
   const threshold = (x, y) => (BAYER[(y % 4) * 4 + (x % 4)] + 0.5) / 16;
@@ -479,6 +486,13 @@ function projectName(row) {
     ctx.putImageData(dithered, 0, 0);
     const shown = Math.ceil(rows * progress);
     if (shown < rows) ctx.fillRect(0, shown, cols, rows - shown);
+    if (mode === 'whole') {
+      // The whole image (as far as the dial-up load has drawn) shows the current stage
+      const tier = stage > 0 && tiers[stage - 1];
+      if (tier) ctx.putImageData(tier, 0, 0, 0, 0, cols, shown);
+      else if (stage === PHOTO_STAGE) ctx.clearRect(0, 0, cols, shown);
+      return;
+    }
     if (radius <= 0) return;
     // Fill whole cells whose centres fall inside the circle, so the edge follows the grid
     const tier = tiers[level];
@@ -566,6 +580,29 @@ function projectName(row) {
     waiting(false);
   }
 
+  // Whole mode: step one stage at a time toward `target`, starting now. Resolving shows the
+  // hourglass; stepping back down doesn't. Either can start from wherever the last one stopped.
+  function stepStage(target, ms) {
+    clearInterval(stageTimer);
+    const resolving = target > stage;
+    if (reduceMotion.matches) {
+      stage = target;
+      waiting(false);
+      render();
+      return;
+    }
+    waiting(resolving);
+    const step = () => {
+      if (stage !== target) stage += resolving ? 1 : -1;
+      render();
+      if (stage !== target) return;
+      clearInterval(stageTimer);
+      waiting(false);
+    };
+    step();
+    if (stage !== target) stageTimer = setInterval(step, ms);
+  }
+
   function pointAt(e) {
     const r = img.getBoundingClientRect();
     cx = e.clientX - r.left;
@@ -594,7 +631,23 @@ function projectName(row) {
     img.addEventListener('error', () => canvas.remove()); // fall back to the plain <img>
   }
 
-  if (fine) {
+  if (mode === 'whole') {
+    if (fine) {
+      wrap.addEventListener('pointerenter', e => {
+        if (e.pointerType !== 'touch') stepStage(PHOTO_STAGE, TIER_MS);
+      });
+      wrap.addEventListener('pointerleave', e => {
+        if (e.pointerType !== 'touch') stepStage(0, REVERSE_MS);
+      });
+    } else {
+      // Touch: tap runs the tiers forward, tap again runs them back
+      let open = false;
+      wrap.addEventListener('click', () => {
+        open = !open;
+        stepStage(open ? PHOTO_STAGE : 0, open ? TIER_MS : REVERSE_MS);
+      });
+    }
+  } else if (fine) {
     wrap.addEventListener('pointerenter', e => {
       if (e.pointerType !== 'touch') startTiers();
     });
