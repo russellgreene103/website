@@ -121,23 +121,9 @@
       margin-bottom: 40px;
     }
 
-    .hero-cta {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--ink);
-      text-decoration: none;
-      border-bottom: 1px solid var(--ink);
-      padding-bottom: 2px;
-      transition: opacity 0.2s;
-    }
-
-    .hero-cta:hover { opacity: 0.5; }
-
     /* ── Expertise ── */
     .expertise {
-      padding: 64px 0;
+      padding: 40px 0;
       border-bottom: 1px solid var(--rule);
       display: grid;
       grid-template-columns: 200px 1fr;
@@ -161,20 +147,55 @@
       gap: 0;
     }
 
-    .expertise-list li {
-      padding: 14px 0;
-      border-bottom: 1px solid var(--rule);
-      font-size: 17px;
-      color: var(--ink);
-    }
+    .expertise-list li { border-bottom: 1px solid var(--rule); }
 
     .expertise-list li:nth-child(odd) { padding-right: 40px; }
-    .expertise-list li span {
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--mid);
-      margin-right: 12px;
+
+    .expertise-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 9px 0;
+      background: none;
+      border: 0;
+      font: inherit;
+      font-size: 17px;
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
     }
+
+    .expertise-item:hover .expertise-name,
+    .expertise-item.is-selected .expertise-name { color: var(--pixel); }
+    .expertise-item:focus-visible { outline: 1px solid var(--pixel); outline-offset: 2px; }
+
+    /* Pixel icons are drawn in by JS; the slot keeps its width either way */
+    .expertise-icon {
+      flex: none;
+      display: inline-grid;
+      width: 22px;
+      height: 20px;
+    }
+
+    .expertise-details {
+      margin-top: 20px;
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.7;
+      color: #555;
+    }
+
+    .expertise-detail + .expertise-detail { margin-top: 14px; }
+
+    .expertise-detail-name {
+      color: var(--ink);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .expertise-see a { color: var(--ink); }
 
     /* ── Work ── */
     #work {
@@ -391,21 +412,6 @@
       justify-content: flex-start;
     }
 
-    .btn-submit {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--paper);
-      background: var(--ink);
-      border: none;
-      padding: 14px 32px;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-
-    .btn-submit:hover { opacity: 0.7; }
-
     /* ── Footer ── */
     footer {
       border-top: 1px solid var(--rule);
@@ -540,7 +546,7 @@
         </p>
         <h1>Russell<br /><em>Greene</em></h1>
         <p class="hero-bio">Orchestrating the friction between visionary storytelling and technological scale. I architect complex productions that define the frontier for global brands.</p>
-        <a href="#contact" class="hero-cta">Get in touch →</a>
+        <a href="#contact" class="hero-cta dos-button"><span class="dos-button-icon" data-icon="envelope" aria-hidden="true"></span><span class="dos-button-label">Get in touch</span><b class="block-cursor dos-button-cursor" aria-hidden="true"></b></a>
       </div>
       <div class="hero-photo-wrap">
         <img src="Russell_Greene_Headshot.png" alt="Russell Greene" class="hero-photo" />
@@ -551,12 +557,56 @@
   <!-- Expertise -->
   <section class="expertise">
     <p class="section-label">Core<br />Expertise</p>
-    <ul class="expertise-list">
-      <li><span>01</span>Cross-functional Leadership</li>
-      <li><span>02</span>Technical Integration Strategy</li>
-      <li><span>03</span>Global Production Ops</li>
-      <li><span>04</span>Creative Agency Architecture</li>
-    </ul>
+    <div class="expertise-body">
+      <ul class="expertise-list">
+        <li>
+          <button type="button" class="expertise-item" data-dir="LEADERSHIP" aria-controls="xp-leadership">
+            <span class="expertise-icon" data-icon="people" aria-hidden="true"></span>
+            <span class="expertise-name">Cross-functional Leadership</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="expertise-item" data-dir="INTEGRATION" aria-controls="xp-integration">
+            <span class="expertise-icon" data-icon="plug" aria-hidden="true"></span>
+            <span class="expertise-name">Technical Integration Strategy</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="expertise-item" data-dir="GLOBAL-OPS" aria-controls="xp-production">
+            <span class="expertise-icon" data-icon="globe" aria-hidden="true"></span>
+            <span class="expertise-name">Global Production Ops</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="expertise-item" data-dir="ARCHITECTURE" aria-controls="xp-architecture">
+            <span class="expertise-icon" data-icon="blocks" aria-hidden="true"></span>
+            <span class="expertise-name">Creative Agency Architecture</span>
+          </button>
+        </li>
+      </ul>
+      <div class="expertise-details">
+        <div class="expertise-detail" id="xp-leadership">
+          <p class="expertise-detail-name">Cross-functional Leadership</p>
+          <p class="expertise-desc">Bringing strategists, designers, animators, and engineers around one brief, and keeping them moving as one team from pitch to launch.</p>
+          <p class="expertise-see">SEE: <a href="https://buck.co/work/sqsp-snow-white" target="_blank" rel="noopener">Squarespace Snow White</a>, <a href="https://buck.co/work/spotify-premium" target="_blank" rel="noopener">Spotify Premium</a>, <a href="https://pompandclout.com/project/joji-777/" target="_blank" rel="noopener">Joji 777</a></p>
+        </div>
+        <div class="expertise-detail" id="xp-integration">
+          <p class="expertise-detail-name">Technical Integration Strategy</p>
+          <p class="expertise-desc">Turning ambitious creative into things that actually ship: immersive platforms, interactive web, and design systems built to scale.</p>
+          <p class="expertise-see">SEE: <a href="https://buck.co/work/microsoft-mesh" target="_blank" rel="noopener">Microsoft Mesh</a>, <a href="https://buck.co/work/kurzgesagt" target="_blank" rel="noopener">Kurzgesagt</a>, <a href="https://buck.co/work/cash-app-visual-identity" target="_blank" rel="noopener">Cash App Visual System</a></p>
+        </div>
+        <div class="expertise-detail" id="xp-production">
+          <p class="expertise-detail-name">Global Production Ops</p>
+          <p class="expertise-desc">Running launch-scale productions across studios and time zones, keeping craft, schedule, and budget aligned from kickoff to delivery.</p>
+          <p class="expertise-see">SEE: <a href="https://buck.co/work/microsoft-copilot-pcs" target="_blank" rel="noopener">Microsoft Copilot+ PC</a>, <a href="https://buck.co/work/google-pixel-4a" target="_blank" rel="noopener">Google Pixel 4a</a>, <a href="https://buck.co/work/microsoft-surface" target="_blank" rel="noopener">Microsoft Surface Pro 9</a></p>
+        </div>
+        <div class="expertise-detail" id="xp-architecture">
+          <p class="expertise-detail-name">Creative Agency Architecture</p>
+          <p class="expertise-desc">Designing how the work gets made: the teams, pipelines, and partnerships that let a studio deliver brand, campaign, and product work at once.</p>
+          <p class="expertise-see">SEE: <a href="https://buck.co/work/eventbrite" target="_blank" rel="noopener">Eventbrite</a>, <a href="https://buck.co/work/jpmorgan-payments" target="_blank" rel="noopener">J.P. Morgan Payments</a>, <a href="https://buck.co/work/cash-app-illustration-system" target="_blank" rel="noopener">Cash App Illustrations</a></p>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- Work -->
@@ -767,7 +817,7 @@
             <textarea id="message" name="message" rows="4" placeholder="Tell me about your project…" required></textarea>
           </div>
           <div class="form-submit">
-            <button type="submit" class="btn-submit">Send message →</button>
+            <button type="submit" class="btn-submit dos-button"><span class="dos-button-icon" data-icon="envelope" aria-hidden="true"></span><span class="dos-button-label">Send message</span><b class="block-cursor dos-button-cursor" aria-hidden="true"></b></button>
           </div>
         </form>
         <div id="form-success" style="display:none; border-top:1px solid var(--rule); padding:28px 0; font-family:var(--mono); font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink);">
@@ -779,7 +829,8 @@
           form.addEventListener('submit', async function(e) {
             e.preventDefault();
             const btn = form.querySelector('.btn-submit');
-            btn.textContent = 'Sending…';
+            const label = btn.querySelector('.dos-button-label') || btn;
+            label.textContent = 'Sending…';
             btn.disabled = true;
             try {
               const res = await fetch(form.action, {
@@ -791,11 +842,11 @@
                 form.style.display = 'none';
                 document.getElementById('form-success').style.display = 'block';
               } else {
-                btn.textContent = 'Error — try again';
+                label.textContent = 'Error — try again';
                 btn.disabled = false;
               }
             } catch {
-              btn.textContent = 'Error — try again';
+              label.textContent = 'Error — try again';
               btn.disabled = false;
             }
           });

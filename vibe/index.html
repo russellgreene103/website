@@ -148,20 +148,8 @@
 
     .gate-submit {
       margin-top: 28px;
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--paper);
-      background: var(--ink);
-      border: none;
-      padding: 14px 32px;
-      cursor: pointer;
-      transition: opacity 0.2s;
       align-self: flex-start;
     }
-
-    .gate-submit:hover { opacity: 0.7; }
 
     /* ── Content (hidden until unlocked) ── */
     #content {
@@ -352,7 +340,7 @@
         <input type="password" id="password" placeholder="••••••••" autocomplete="off" />
       </div>
       <p class="gate-error" id="gate-error">Incorrect password</p>
-      <button class="gate-submit" id="gate-btn">Enter →</button>
+      <button class="gate-submit dos-button" id="gate-btn"><span class="dos-button-icon" data-icon="enter" aria-hidden="true"></span><span class="dos-button-label">Enter</span><b class="block-cursor dos-button-cursor" aria-hidden="true"></b></button>
     </div>
   </div>
 

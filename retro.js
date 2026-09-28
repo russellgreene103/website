@@ -8,6 +8,63 @@ function projectName(row) {
     .filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent).join('').trim();
 }
 
+// Letter-grid pixel art: each letter becomes one path with class g-<letter>
+// (g-I ink, g-P pixel blue, g-C currentColor); '.' is empty
+function gridSvg(rows, cell = 2) {
+  const paths = {};
+  rows.forEach((row, y) => [...row].forEach((c, x) => {
+    if (c !== '.') paths[c] = (paths[c] || '') + `M${x * cell} ${y * cell}h${cell}v${cell}h-${cell}z`;
+  }));
+  const w = rows[0].length * cell, h = rows.length * cell;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges" aria-hidden="true">` +
+    Object.entries(paths).map(([c, d]) => `<path class="g-${c}" d="${d}"/>`).join('') + '</svg>';
+}
+
+// Place small sprites onto a blank w×h grid
+function stamp(w, h, sprites) {
+  const grid = Array.from({ length: h }, () => Array(w).fill('.'));
+  for (const [rows, x, y] of sprites) {
+    rows.forEach((row, j) => [...row].forEach((c, i) => {
+      if (c !== '.' && grid[y + j] && x + i >= 0 && x + i < w) grid[y + j][x + i] = c;
+    }));
+  }
+  return grid.map(r => r.join(''));
+}
+
+// Two-frame pixel icons, drawn into any element with a matching data-icon
+const PIXEL_ICONS = (() => {
+  const person = head => [`.${head}.`, '...', 'III', 'III', 'III', 'I.I'];
+  const PLUG = ['.III..', '.IIIPP', 'IIII..', 'IIII..', '.IIIPP', '.III..'];
+  const SOCKET = ['III', '.II', 'III', 'III', '.II', 'III'];
+  const BLOCK = ['IIII', 'I..I', 'IIII'], TOP = ['PPPP', 'P..P', 'PPPP'];
+  // A globe whose meridians (and one blue city) shift a column per frame, so it turns
+  const globe = shift => Array.from({ length: 10 }, (_, y) => Array.from({ length: 10 }, (_, x) => {
+    const d = Math.hypot(x - 4.5, y - 4.5);
+    if (d > 4.8) return '.';
+    if (d > 3.8) return 'I';
+    if (x === 5 + shift && y === 6) return 'P';
+    return y === 4 || (x - shift) % 3 === 1 ? 'I' : '.';
+  }).join(''));
+  const ENVELOPE_BODY = ['CCCCCCCCCC', 'CC......CC', 'C.C....C.C', 'C..C..C..C', 'C...CC...C', 'C........C', 'CCCCCCCCCC'];
+  const ENVELOPE_OPEN = ['....CC....', '..CC..CC..', 'CC......CC', 'C........C', 'C..C..C..C', 'C...CC...C', 'C........C', 'C........C', 'CCCCCCCCCC'];
+  const ENTER = ['........C.', '........C.', '..C.....C.', '.CC.....C.', 'CCCCCCCCC.', '.CC.......', '..C.......'];
+  return {
+    people: [stamp(11, 10, [[person('I'), 0, 3], [person('P'), 4, 2], [person('I'), 8, 3]]),
+             stamp(11, 10, [[person('I'), 0, 2], [person('P'), 4, 3], [person('I'), 8, 2]])],
+    plug: [stamp(10, 10, [[PLUG, 0, 2], [SOCKET, 7, 2]]), stamp(10, 10, [[['II', 'II'], 0, 4], [PLUG, 2, 2], [SOCKET, 7, 2]])],
+    globe: [globe(0), globe(1)],
+    // Rest on the settled stack; the loop lifts the top block and drops it back into place
+    blocks: [stamp(10, 10, [[BLOCK, 1, 7], [BLOCK, 5, 7], [TOP, 3, 4]]), stamp(10, 10, [[BLOCK, 1, 7], [BLOCK, 5, 7], [TOP, 3, 1]])],
+    envelope: [stamp(10, 9, [[ENVELOPE_BODY, 0, 2]]), ENVELOPE_OPEN],
+    enter: [stamp(11, 7, [[ENTER, 1, 0]]), stamp(11, 7, [[ENTER, 0, 0]])],
+  };
+})();
+
+document.querySelectorAll('[data-icon]').forEach(slot => {
+  const frames = PIXEL_ICONS[slot.dataset.icon];
+  if (frames) slot.innerHTML = frames.map(f => gridSvg(f)).join('');
+});
+
 // Pixel cursor — only on devices with a fine pointer that can hover
 (function () {
   if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
@@ -118,11 +175,9 @@ function projectName(row) {
     });
   }
   const trail = makeBits(60);
-  const burst = makeBits(8);
   document.body.append(cursor);
   root.classList.add('has-cursor');
 
-  const BURST_DIRS = [[0, -24], [18, -18], [24, 0], [18, 18], [0, 24], [-18, 18], [-24, 0], [-18, -18]];
   const snap = v => Math.floor(v / 4) * 4;
 
   function play(el, classes, x, y) {
@@ -327,14 +382,183 @@ function projectName(row) {
     if (link) window.open(link.href, '_blank', 'noopener');
   });
 
+  // Click effects: six stepped pixel effects on a 4px grid, one per click, never the same twice
+  // in a row. Elements come from fixed pools, so the pool sizes cap what's on screen.
+  const INK = 'var(--ink)', BLUE = 'var(--pixel)';
+  const WORDS = ['+100', 'RAD', 'OK!', 'WOW', 'NICE'];
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const grid = v => Math.round(v / 4) * 4;
+  const easeOut = t => 1 - Math.pow(1 - t, 3);
+
+  function makePool(n, className) {
+    return Array.from({ length: n }, () => {
+      const el = document.createElement('div');
+      el.className = className;
+      el.setAttribute('aria-hidden', 'true');
+      document.body.append(el);
+      return el;
+    });
+  }
+  const fxBits = makePool(72, 'fx-bit');
+  const fxWords = makePool(3, 'fx-word');
+  let nextBitFx = 0, nextWord = 0, lastEffect = -1;
+
+  // n+1 hard-cut keyframes; each step lasts longer than the one before, so motion starts fast and settles
+  function stepped(n, at) {
+    return Array.from({ length: n + 1 }, (_, i) => {
+      const t = i / n;
+      const f = at(t);
+      return {
+        offset: f.offset ?? Math.pow(t, 1.35),
+        easing: 'steps(1, end)',
+        transform: `translate(${grid(f.x || 0)}px, ${grid(f.y || 0)}px) scale(${f.s ?? 1})`,
+        opacity: f.o ?? 1,
+      };
+    });
+  }
+
+  function spawn(x, y, { w = 4, h = w, color = INK, frames, duration }) {
+    const el = fxBits[nextBitFx];
+    nextBitFx = (nextBitFx + 1) % fxBits.length;
+    el.getAnimations().forEach(a => a.cancel());
+    el.style.width = `${w}px`;
+    el.style.height = `${h}px`;
+    el.style.background = color;
+    el.style.translate = `${grid(x - w / 2)}px ${grid(y - h / 2)}px`;
+    el.animate(frames, { duration, fill: 'forwards' });
+  }
+
+  const mixed = blueShare => (Math.random() < blueShare ? BLUE : INK);
+
+  // a. Burst: 16 pixels out in every direction, arcing down with gravity as they fade
+  function burstFx(x, y) {
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * Math.PI * 2 + rand(-0.2, 0.2);
+      const dist = rand(20, 56), drop = rand(12, 32);
+      spawn(x, y, {
+        w: Math.random() < 0.3 ? 8 : 4, color: mixed(0.35), duration: rand(420, 640),
+        frames: stepped(6, t => ({
+          x: Math.cos(angle) * dist * easeOut(t),
+          y: Math.sin(angle) * dist * easeOut(t) + drop * t * t,
+          s: t > 0.65 ? 0.5 : 1,
+          o: t < 1 ? 1 : 0,
+        })),
+      });
+    }
+  }
+
+  // b. Shockwave: four rings, each wider, thinner and bluer, shown one after another
+  function shockwaveFx(x, y) {
+    const RINGS = [[8, 12], [16, 12], [24, 10], [32, 8]]; // radius, pixel count
+    const WINDOWS = [0, 0.14, 0.32, 0.58, 1];              // uneven: early rings flash by
+    const spin = rand(0, Math.PI), duration = rand(360, 440);
+    RINGS.forEach(([radius, count], k) => {
+      for (let i = 0; i < count; i++) {
+        const angle = spin + (i / count) * Math.PI * 2;
+        const start = WINDOWS[k], end = WINDOWS[k + 1];
+        const frames = [];
+        if (start > 0) frames.push({ offset: 0, opacity: 0, easing: 'steps(1, end)' });
+        frames.push({ offset: start, opacity: 1, easing: 'steps(1, end)' });
+        frames.push({ offset: end, opacity: 0, easing: 'steps(1, end)' });
+        if (end < 1) frames.push({ offset: 1, opacity: 0 });
+        spawn(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius, {
+          color: k < 2 ? INK : BLUE, duration, frames,
+        });
+      }
+    });
+  }
+
+  // c. Fountain: a spray shoots up and falls back down past the click point
+  function fountainFx(x, y) {
+    const count = 12 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < count; i++) {
+      const vx = rand(-44, 44), rise = rand(36, 72), fall = rand(16, 40);
+      // y(t) = -v·t + (g/2)·t², peaking at -rise and ending at +fall
+      const v = 2 * (rise + Math.sqrt(rise * rise + rise * fall)), g = 2 * (fall + v);
+      spawn(x, y, {
+        w: Math.random() < 0.25 ? 8 : 4, color: mixed(0.4), duration: rand(620, 820),
+        frames: stepped(8, t => ({ offset: t, x: vx * t, y: -v * t + (g / 2) * t * t, o: t < 1 ? 1 : 0 })),
+      });
+    }
+  }
+
+  // d. Firework: a rocket climbs, hangs for a beat, then pops into a small burst
+  function fireworkFx(x, y) {
+    const height = grid(rand(52, 68)), duration = rand(880, 1000);
+    const LAUNCH_END = 0.36, POP = 0.5;
+    const rocket = [0, 1, 2, 3, 4].map(i => ({
+      offset: LAUNCH_END * Math.pow(i / 4, 1.3), easing: 'steps(1, end)',
+      transform: `translate(0px, ${grid(-height * easeOut(i / 4))}px)`, opacity: 1,
+    }));
+    rocket.push({ offset: POP, transform: `translate(0px, ${-height}px)`, opacity: 0, easing: 'steps(1, end)' });
+    rocket.push({ offset: 1, transform: `translate(0px, ${-height}px)`, opacity: 0 });
+    spawn(x, y, { color: INK, duration, frames: rocket });
+
+    const sparks = 9 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < sparks; i++) {
+      const angle = (i / sparks) * Math.PI * 2 + rand(-0.25, 0.25);
+      const dist = rand(12, 28);
+      const frames = [{ offset: 0, opacity: 0, easing: 'steps(1, end)' }];
+      for (let k = 0; k <= 5; k++) {
+        const t = k / 5;
+        frames.push({
+          offset: POP + (1 - POP) * Math.pow(t, 1.35), easing: 'steps(1, end)',
+          transform: `translate(${grid(Math.cos(angle) * dist * easeOut(t))}px, ${grid(Math.sin(angle) * dist * easeOut(t) + 16 * t * t)}px)`,
+          opacity: k < 5 ? 1 : 0,
+        });
+      }
+      spawn(x, y - height, { color: mixed(0.6), duration, frames });
+    }
+  }
+
+  // e. Score popup: a word jumps up in steps, then blinks out
+  function scoreFx(x, y) {
+    const el = fxWords[nextWord];
+    nextWord = (nextWord + 1) % fxWords.length;
+    el.getAnimations().forEach(a => a.cancel());
+    el.textContent = WORDS[Math.floor(Math.random() * WORDS.length)];
+    el.style.translate = `${grid(x + rand(-8, 8))}px ${grid(y) - 12}px`;
+    const rise = [0, 12, 20, 28, 32];
+    const frames = rise.map((dy, i) => ({
+      offset: [0, 0.08, 0.2, 0.34, 0.5][i], easing: 'steps(1, end)',
+      transform: `translate(-50%, ${-dy}px)`, opacity: 1,
+    }));
+    [[0.64, 0], [0.74, 1], [0.84, 0], [0.9, 1], [1, 0]].forEach(([offset, opacity]) =>
+      frames.push({ offset, easing: 'steps(1, end)', transform: 'translate(-50%, -32px)', opacity }));
+    el.animate(frames, { duration: rand(650, 800), fill: 'forwards' });
+  }
+
+  // f. CRT glitch: broken scanline strips flicker and jitter around the click for ~200ms
+  function glitchFx(x, y) {
+    const strips = 4 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < strips; i++) {
+      const w = grid(rand(16, 64)), h = Math.random() < 0.3 ? 8 : 4;
+      const color = i % 2 ? BLUE : INK;
+      const frames = Array.from({ length: 7 }, (_, k) => ({
+        offset: Math.pow(k / 6, 1.2), easing: 'steps(1, end)',
+        transform: `translate(${grid(rand(-8, 8))}px, 0px)`,
+        opacity: k === 6 ? 0 : (k === 0 || Math.random() < 0.7 ? 1 : 0),
+      }));
+      spawn(x + rand(-40, 40), y + rand(-24, 24), {
+        w, h, duration: rand(180, 240), frames,
+        color: `repeating-linear-gradient(90deg, ${color} 0 8px, transparent 8px 12px)`,
+      });
+    }
+  }
+
+  const EFFECTS = [burstFx, shockwaveFx, fountainFx, fireworkFx, scoreFx, glitchFx];
+
+  function pickEffect() {
+    if (lastEffect < 0) return Math.floor(Math.random() * EFFECTS.length);
+    const i = Math.floor(Math.random() * (EFFECTS.length - 1));
+    return i >= lastEffect ? i + 1 : i;
+  }
+
   document.addEventListener('mousedown', e => {
     if (e.button !== 0 || overField || reduceMotion.matches) return;
-    const x = Math.round(e.clientX) - 2, y = Math.round(e.clientY) - 2;
-    burst.forEach((el, i) => {
-      el.style.setProperty('--dx', `${BURST_DIRS[i][0]}px`);
-      el.style.setProperty('--dy', `${BURST_DIRS[i][1]}px`);
-      play(el, i % 2 ? 'is-burst is-blue' : 'is-burst', x, y);
-    });
+    if (e.target.closest && e.target.closest('input, textarea, select')) return;
+    lastEffect = pickEffect();
+    EFFECTS[lastEffect](e.clientX, e.clientY);
   });
 })();
 
@@ -680,7 +904,7 @@ const retroTerminal = (function () {
       overlay.classList.add('is-open');
       if (!booted) {
         booted = true;
-        print('RUSSELL-DOS Version 6.22', '(C)Copyright Russell Greene 1981-2026.', '', 'Type HELP for a list of commands.', '');
+        print('RUSSELL-DOS Version 6.22', '(C)Copyright Russell Greene 2026.', '', 'Type HELP for a list of commands.', '');
       }
     }
     input.focus(); // synchronous, so touch devices raise the on-screen keyboard
@@ -934,4 +1158,144 @@ const retroTerminal = (function () {
     }, STEP_MS);
   }, { threshold: 0.5 });
   io.observe(section);
+})();
+
+// Core expertise readout: hovering (or tapping, or focusing) a skill types its description
+// into a DOS-style panel under the grid, followed by links to related work
+(function () {
+  const section = document.querySelector('.expertise');
+  const items = section ? [...section.querySelectorAll('.expertise-item')] : [];
+  const details = section && section.querySelector('.expertise-details');
+  if (!items.length || !details) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const canHover = window.matchMedia('(hover: hover)').matches;
+  const CHAR_MS = 12;
+
+  const panel = document.createElement('div');
+  panel.className = 'xp-panel';
+  panel.setAttribute('aria-live', 'polite');
+  panel.innerHTML =
+    '<div class="xp-screen" aria-hidden="true"><div class="xp-prompt"></div><div class="xp-text"></div></div>' +
+    '<p class="xp-announce"></p><p class="xp-see"></p>';
+  details.before(panel);
+  section.classList.add('xp-ready');
+
+  const cursor = () => {
+    const b = document.createElement('b');
+    b.className = 'block-cursor';
+    return b;
+  };
+
+  function skill(item) {
+    const detail = document.getElementById(item.getAttribute('aria-controls'));
+    return {
+      name: item.querySelector('.expertise-name').textContent.trim(),
+      dir: item.dataset.dir,
+      desc: detail.querySelector('.expertise-desc').textContent.trim(),
+      links: [...detail.querySelectorAll('.expertise-see a')],
+    };
+  }
+
+  // Fill a panel for a skill (or the idle prompt), showing `typed` characters of the description
+  function fill(target, item, typed = Infinity) {
+    const prompt = target.querySelector('.xp-prompt');
+    const text = target.querySelector('.xp-text');
+    const see = target.querySelector('.xp-see');
+    prompt.textContent = '';
+    text.textContent = '';
+    see.textContent = '';
+    if (!item) {
+      prompt.append('C:\\EXPERTISE>', cursor());
+      const hint = document.createElement('span');
+      hint.className = 'xp-hint';
+      hint.textContent = canHover ? 'hover a skill' : 'tap a skill';
+      prompt.append(hint);
+      return;
+    }
+    const { dir, desc, links } = skill(item);
+    prompt.textContent = `C:\\EXPERTISE\\${dir}>`;
+    text.append(desc.slice(0, typed), cursor());
+    if (typed < desc.length) return;
+    see.append('SEE: ');
+    links.forEach((a, i) => see.append(i ? ', ' : '', a.cloneNode(true)));
+  }
+
+  // Fixed height: the tallest of all states at the current width, so hovering never shifts layout
+  function measure() {
+    const probe = panel.cloneNode(true);
+    probe.removeAttribute('aria-live');
+    probe.setAttribute('aria-hidden', 'true');
+    probe.style.cssText = `position:absolute;visibility:hidden;height:auto;width:${panel.offsetWidth}px`;
+    panel.parentNode.append(probe);
+    let tallest = 0;
+    for (const item of [null, ...items]) {
+      fill(probe, item);
+      tallest = Math.max(tallest, probe.offsetHeight);
+    }
+    probe.remove();
+    panel.style.height = `${tallest}px`;
+  }
+
+  let current = null, typeTimer = 0;
+
+  function select(item) {
+    if (item === current) return;
+    current = item;
+    clearInterval(typeTimer);
+    items.forEach(i => i.classList.toggle('is-selected', i === item));
+    const announce = panel.querySelector('.xp-announce');
+    if (!item) {
+      announce.textContent = '';
+      fill(panel, null);
+      return;
+    }
+    const { name, desc } = skill(item);
+    announce.textContent = `${name}: ${desc}`;
+    if (reduceMotion.matches) { fill(panel, item); return; }
+    let typed = 0;
+    fill(panel, item, 0);
+    typeTimer = setInterval(() => {
+      typed++;
+      fill(panel, item, typed);
+      if (typed >= desc.length) clearInterval(typeTimer);
+    }, CHAR_MS);
+  }
+
+  fill(panel, null);
+  measure();
+  // Re-measure when the column width changes (the height it sets would otherwise re-trigger this)
+  let measuredWidth = panel.offsetWidth;
+  new ResizeObserver(() => {
+    if (panel.offsetWidth === measuredWidth) return;
+    measuredWidth = panel.offsetWidth;
+    measure();
+  }).observe(panel.parentNode);
+  document.fonts.ready.then(measure);
+
+  let pointerFocus = false;
+  items.forEach(item => {
+    if (canHover) item.addEventListener('mouseenter', () => select(item));
+    item.addEventListener('pointerdown', () => { pointerFocus = true; });
+    // Keyboard focus updates the panel; focus that comes from a click or tap is left to the click
+    item.addEventListener('focus', () => {
+      if (!pointerFocus) select(item);
+      pointerFocus = false;
+    });
+    item.addEventListener('click', () => {
+      pointerFocus = false;
+      // On touch, tapping the selected skill again returns to the idle prompt
+      select(!canHover && item === current ? null : item);
+    });
+  });
+})();
+
+// DOS buttons: a keyboard press gets the same pushed-in look as a mouse press
+(function () {
+  const PRESS_MS = 120;
+  document.addEventListener('keydown', e => {
+    const button = e.target.closest && e.target.closest('.dos-button');
+    if (!button || (e.key !== 'Enter' && e.key !== ' ')) return;
+    button.classList.add('is-pressed');
+    setTimeout(() => button.classList.remove('is-pressed'), PRESS_MS);
+  });
 })();

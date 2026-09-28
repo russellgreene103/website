@@ -105,7 +105,6 @@
 .pixel-bit.is-big { width: 8px; height: 8px; }
 .pixel-bit.is-blue { background: var(--pixel); }
 .pixel-bit.is-trail { scale: 1; animation: pixel-fade 700ms steps(1, end) forwards; }
-.pixel-bit.is-burst { animation: pixel-burst 320ms steps(1, end) forwards; }
 
 html.has-cursor,
 html.has-cursor * { cursor: none !important; }
@@ -159,14 +158,6 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
   50%  { transform: translateY(calc(var(--fall) / 2)) scale(0.5); }
   75%  { transform: translateY(var(--fall)) scale(0.5); }
   100% { transform: translateY(var(--fall)) scale(0); }
-}
-
-@keyframes pixel-burst {
-  0%   { scale: 1; transform: translate(0, 0); }
-  25%  { transform: translate(calc(var(--dx) / 3), calc(var(--dy) / 3)); }
-  50%  { transform: translate(calc(var(--dx) * 2 / 3), calc(var(--dy) * 2 / 3)); }
-  75%  { transform: translate(var(--dx), var(--dy)); }
-  100% { scale: 0; transform: translate(var(--dx), var(--dy)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -305,4 +296,160 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
   .block-cursor,
   .dos-term-overlay.is-open .dos-term,
   .dos-term-overlay.is-closing .dos-term { animation: none; }
+}
+
+/* Letter-grid pixel icons (see gridSvg in retro.js) */
+.g-I { fill: var(--ink); }
+.g-P { fill: var(--pixel); }
+.g-C { fill: currentColor; }
+
+/* Two-frame icons: frames stack; the second hides until its item is active */
+.expertise-icon svg,
+.dos-button-icon svg { grid-area: 1 / 1; }
+.expertise-icon svg + svg,
+.dos-button-icon svg + svg { visibility: hidden; }
+
+.expertise-item:hover .expertise-icon svg,
+.expertise-item.is-selected .expertise-icon svg { animation: icon-frame 0.8s steps(1, end) infinite; }
+.expertise-item:hover .expertise-icon svg + svg,
+.expertise-item.is-selected .expertise-icon svg + svg { animation-delay: -0.4s; }
+
+@keyframes icon-frame {
+  0%        { visibility: visible; }
+  50%, 100% { visibility: hidden; }
+}
+
+/* Core expertise readout panel (JS replaces the plain description list with it) */
+.expertise.xp-ready .expertise-details { display: none; }
+
+.xp-panel {
+  position: relative;
+  margin-top: 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.7;
+  color: #555;
+  overflow: hidden;
+}
+
+.xp-prompt {
+  color: var(--ink);
+  letter-spacing: 0.06em;
+}
+
+.xp-hint {
+  margin-left: 14px;
+  color: var(--mid);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.xp-see {
+  margin-top: 6px;
+  color: var(--ink);
+  letter-spacing: 0.06em;
+}
+
+.xp-see a {
+  color: var(--pixel);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
+
+/* Screen-reader copy of the full description; the typed text is aria-hidden */
+.xp-announce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* DOS buttons: hero CTA, contact submit, /vibe gate */
+.dos-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 18px;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+}
+
+.dos-button:hover {
+  color: var(--paper);
+  background: var(--pixel);
+}
+
+/* Pressed: the key goes down into its shadow, then springs back */
+.dos-button:active,
+.dos-button.is-pressed {
+  translate: 3px 3px;
+  box-shadow: none;
+}
+
+.dos-button:focus-visible {
+  outline: 2px solid var(--pixel);
+  outline-offset: 4px;
+}
+
+.dos-button:disabled { cursor: default; }
+
+.dos-button-icon { display: inline-grid; }
+.dos-button-icon:empty { display: none; }
+
+.dos-button-cursor { display: none; }
+.dos-button:hover .dos-button-cursor { display: inline-block; margin-left: -4px; }
+
+/* Hover opens the envelope (or nudges the enter arrow): frame one, then frame two, and hold */
+.dos-button:hover .dos-button-icon svg:first-child { animation: flap-first 160ms steps(1, end) forwards; }
+.dos-button:hover .dos-button-icon svg + svg { animation: flap-second 160ms steps(1, end) forwards; }
+
+@keyframes flap-first {
+  0%        { visibility: visible; }
+  50%, 100% { visibility: hidden; }
+}
+
+@keyframes flap-second {
+  0%        { visibility: hidden; }
+  50%, 100% { visibility: visible; }
+}
+
+/* Click effects (fine pointers only; pooled elements added by JS) */
+.fx-bit,
+.fx-word {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9998;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.fx-word {
+  font-family: 'Silkscreen', var(--mono);
+  font-size: 16px;
+  line-height: 1;
+  color: var(--pixel);
+  text-shadow: 1px 1px 0 var(--ink);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expertise-item:hover .expertise-icon svg,
+  .expertise-item.is-selected .expertise-icon svg,
+  .dos-button:hover .dos-button-icon svg { animation: none; }
 }
