@@ -334,6 +334,57 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
   font-size: 20px;
 }
 
+/* ROCKS.EXE: while the game runs, it replaces the terminal's text screen */
+.dos-term-overlay.is-game .dos-term { width: auto; max-width: 100%; }
+.dos-term-overlay.is-game .dos-term-screen { height: auto; overflow: hidden; padding: 10px; }
+.dos-term-overlay.is-game .dos-term-output,
+.dos-term-overlay.is-game .dos-term-line { display: none; }
+
+.dos-term-game[hidden] { display: none; }
+.dos-term-game:focus { outline: none; }
+
+.rocks-canvas {
+  display: block;
+  margin: 0 auto;
+  image-rendering: pixelated;
+}
+
+.rocks-pad {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.rocks-button {
+  min-width: 52px;
+  padding: 14px 8px;
+  font-family: 'Silkscreen', var(--mono);
+  font-size: 8px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  box-shadow: 2px 2px 0 var(--ink);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.rocks-button.is-down {
+  translate: 2px 2px;
+  box-shadow: none;
+}
+
+.dos-term-announce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .block-cursor,
   .dos-term-overlay.is-open .dos-term,

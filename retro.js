@@ -328,7 +328,7 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
 
   function setState(target) {
     if (!target || !target.closest) return;
-    const field = target.closest('input, textarea');
+    const field = target.closest('input, textarea, [data-hide-cursor]');
     const row = !field && target.closest(ROW_SELECTOR);
     const link = !field && (row || target.closest('a, button, [role="button"]'));
     overField = !!field;
@@ -811,7 +811,8 @@ const retroTerminal = (function () {
   const CLOSE_MS = 120;
   const nyc = opts => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', ...opts });
 
-  let overlay, screen, output, input, typed, closeBox;
+  let overlay, screen, output, input, typed, closeBox, title, gameHost, announcer;
+  let game = null, launching = false;
   let isOpen = false, booted = false, lastFocus = null, closeTimer = 0;
   const history = [];
   let historyAt = 0;
@@ -836,7 +837,9 @@ const retroTerminal = (function () {
               '<input class="dos-term-input" type="text" aria-label="Command" autocomplete="off" ' +
                 'autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go">' +
             '</div>' +
+            '<div class="dos-term-game" tabindex="-1" hidden></div>' +
           '</div>' +
+          '<p class="dos-term-announce" aria-live="polite"></p>' +
         '</div>' +
       '</div>';
     document.body.append(overlay);
@@ -845,18 +848,22 @@ const retroTerminal = (function () {
     input = overlay.querySelector('.dos-term-input');
     typed = overlay.querySelector('.dos-term-typed');
     closeBox = overlay.querySelector('.dos-term-close');
+    title = overlay.querySelector('#dos-term-title');
+    gameHost = overlay.querySelector('.dos-term-game');
+    announcer = overlay.querySelector('.dos-term-announce');
     overlay.querySelector('.dos-term-prompt').textContent = PROMPT;
 
     closeBox.addEventListener('click', close);
     // The visible line mirrors the (transparent) input, so the block cursor always sits at the end
     input.addEventListener('input', () => { typed.textContent = input.value; });
     input.addEventListener('keydown', onInputKey);
-    screen.addEventListener('click', () => input.focus());
-    // Keep focus inside the dialog: Tab moves between the close box and the input
+    screen.addEventListener('click', () => (game ? gameHost : input).focus());
+    // Keep focus inside the dialog: Tab moves between the close box and the input (or the game)
     overlay.addEventListener('keydown', e => {
       if (e.key !== 'Tab') return;
       e.preventDefault();
-      (document.activeElement === input ? closeBox : input).focus();
+      const main = game ? gameHost : input;
+      (document.activeElement === main ? closeBox : main).focus();
     });
   }
 
@@ -875,6 +882,7 @@ const retroTerminal = (function () {
   }
 
   function onInputKey(e) {
+    if (launching) { e.preventDefault(); return; }
     if (e.key === 'Enter') {
       e.preventDefault();
       const line = input.value;
@@ -913,6 +921,8 @@ const retroTerminal = (function () {
   function close() {
     if (!isOpen) return;
     isOpen = false;
+    launching = false;
+    stopRocks();
     overlay.classList.remove('is-open');
     const finish = () => { overlay.hidden = true; overlay.classList.remove('is-closing'); };
     if (reduceMotion.matches) finish();
@@ -955,26 +965,32 @@ const retroTerminal = (function () {
     return h >>> 0;
   }
 
+  // One DIR line: stable size and timestamp derived from the title
+  function dirEntry(index, name, ext, title) {
+    const size = 4096 + (hash(title) % 190) * 512;
+    const d = hash(`${title}:date`);
+    const month = String(1 + d % 12).padStart(2, '0');
+    const day = String(1 + (d >>> 4) % 28).padStart(2, '0');
+    const year = String(19 + (d >>> 9) % 7);
+    const hour = 1 + (d >>> 12) % 12, minute = String((d >>> 16) % 60).padStart(2, '0');
+    const ampm = (d >>> 22) % 2 ? 'p' : 'a';
+    return {
+      size,
+      line: `${index.padStart(2)}  ${name.padEnd(8)} ${ext} ${size.toLocaleString('en-US').padStart(7)}  ` +
+        `${month}-${day}-${year}  ${String(hour).padStart(2)}:${minute}${ampm}`,
+    };
+  }
+
   function dir() {
     const list = listing();
     if (!list) { print('Access denied'); return; }
     const names = shortNames(list.items);
-    let total = 0;
-    print(' Volume in drive C is RUSSELL', ` Directory of ${list.dir}`, '');
-    list.items.forEach((item, i) => {
-      const h = hash(item.title);
-      const size = 4096 + (h % 190) * 512;
-      total += size;
-      const d = hash(`${item.title}:date`);
-      const month = String(1 + d % 12).padStart(2, '0');
-      const day = String(1 + (d >>> 4) % 28).padStart(2, '0');
-      const year = String(19 + (d >>> 9) % 7);
-      const hour = 1 + (d >>> 12) % 12, minute = String((d >>> 16) % 60).padStart(2, '0');
-      const ampm = (d >>> 22) % 2 ? 'p' : 'a';
-      print(`${String(i + 1).padStart(2)}  ${names[i].padEnd(8)} ${list.ext} ${size.toLocaleString('en-US').padStart(7)}  ` +
-        `${month}-${day}-${year}  ${String(hour).padStart(2)}:${minute}${ampm}`);
-    });
-    print(`${String(list.items.length).padStart(9)} file(s) ${total.toLocaleString('en-US').padStart(11)} bytes`, '', 'Type OPEN N to open a file.');
+    const entries = list.items.map((item, i) => dirEntry(String(i + 1), names[i], list.ext, item.title));
+    // The easter egg's clue: listed last, with no number, so OPEN N never reaches it
+    entries.push(dirEntry('', 'ROCKS', 'EXE', 'ROCKS.EXE'));
+    const total = entries.reduce((n, e) => n + e.size, 0);
+    print(' Volume in drive C is RUSSELL', ` Directory of ${list.dir}`, '', ...entries.map(e => e.line));
+    print(`${String(entries.length).padStart(9)} file(s) ${total.toLocaleString('en-US').padStart(11)} bytes`, '', 'Type OPEN N to open a file.');
   }
 
   function openItem(arg) {
@@ -992,6 +1008,91 @@ const retroTerminal = (function () {
       .formatToParts(now).map(p => [p.type, p.value]));
     print(`Current time is ${nyc({ hour: 'numeric', minute: '2-digit', second: '2-digit' }).format(now)} (New York)`,
       `Current date is ${parts.weekday} ${parts.month}-${parts.day}-${parts.year}`);
+  }
+
+  // ROCKS.EXE: the game code loads on demand and takes over the screen area of the terminal
+  function announce(text) {
+    announcer.textContent = '';
+    setTimeout(() => { announcer.textContent = text; }, 50);
+  }
+
+  const loadRocks = () => window.RocksGame ? Promise.resolve() : new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = '/rocks.js';
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.append(script);
+  });
+
+  // Largest whole-number scale of the 320×200 screen that fits the window (0 if it doesn't fit)
+  function rocksScale(touch) {
+    const width = window.innerWidth - 32 - 40;             // overlay gutters, frame and padding
+    const height = window.innerHeight * 0.88 - 80 - (touch ? 64 : 0); // top offset, title bar, touch pad
+    return Math.min(3, Math.floor(Math.min(width / 320, height / 200)));
+  }
+
+  function rocks() {
+    if (launching || game) return;
+    launching = true;
+    const loaded = loadRocks();
+    const lines = ['Loading ROCKS.EXE...', '640K OK', 'EGA graphics detected'];
+    let i = 0;
+    const next = () => {
+      if (!launching) return;
+      if (i < lines.length) {
+        print(lines[i++]);
+        setTimeout(next, reduceMotion.matches ? 0 : 350);
+        return;
+      }
+      loaded.then(startRocks, () => {
+        launching = false;
+        print('ROCKS.EXE is missing or damaged.');
+      });
+    };
+    next();
+  }
+
+  function startRocks() {
+    if (!launching) return;
+    launching = false;
+    const touch = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const scale = rocksScale(touch);
+    if (scale < 1) {
+      print('', 'ROCKS.EXE needs a bigger screen than this one.', 'Try it on a computer or a larger window.', '');
+      return;
+    }
+    overlay.classList.add('is-game');
+    gameHost.hidden = false;
+    title.textContent = 'C:\\RUSSELL\\ROCKS.EXE';
+    const background = getComputedStyle(root).getPropertyValue('--pixel').trim() || '#1f3bd6';
+    game = window.RocksGame.create(gameHost, { scale, touch, background, announce, onExit: endRocks });
+    gameHost.focus();
+    announce(touch
+      ? 'ROCKS.EXE is running. Tap FIRE to start. Buttons below the game turn left and right, thrust, fire, and jump to hyperspace.'
+      : 'ROCKS.EXE is running. Press Space to start. Arrow keys or W A S D turn and thrust, Space fires, Down or S jumps to hyperspace, P pauses, M toggles sound, Escape quits.');
+  }
+
+  function restoreTerminal() {
+    overlay.classList.remove('is-game');
+    gameHost.hidden = true;
+    gameHost.textContent = '';
+    title.textContent = 'C:\\RUSSELL\\COMMAND.COM';
+  }
+
+  // Esc inside the game: back to the prompt with the score
+  function endRocks(score) {
+    game = null;
+    restoreTerminal();
+    print(`Thanks for playing. Score: ${score}.`);
+    input.focus();
+  }
+
+  // Closing the terminal: stop the loop and any sound, no message
+  function stopRocks() {
+    if (!game) return;
+    game.stop();
+    game = null;
+    restoreTerminal();
   }
 
   function win() {
@@ -1036,6 +1137,8 @@ const retroTerminal = (function () {
     cls: () => { output.textContent = ''; },
     exit: close,
     win,
+    rocks,
+    'rocks.exe': rocks,
     format: arg => print(/^c:?$/.test(arg) ? 'Nice try.' : 'Bad command or file name'),
   };
 
@@ -1059,7 +1162,10 @@ const retroTerminal = (function () {
     open();
   });
 
-  return { open };
+  return {
+    open,
+    get game() { return game; }, // for testing the running game
+  };
 })();
 
 // Prompt-style clock in the hero meta line: C:\NYC> 9:27 AM, opens the terminal
