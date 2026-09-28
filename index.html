@@ -447,17 +447,25 @@
       align-items: end;
     }
 
+    .hero-photo-wrap { position: relative; }
+
     .hero-photo {
       width: 100%;
       aspect-ratio: 3 / 4;
       object-fit: cover;
       object-position: center top;
       display: block;
-      filter: grayscale(100%);
-      transition: filter 0.4s ease;
     }
 
-    .hero-photo:hover { filter: grayscale(0%); }
+    /* Dithered DOS layer drawn over the photo by JS; cleared cells let the real photo through */
+    .hero-dither {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+    }
 
     /* ── Fade in on load ── */
     @keyframes fadeUp {
@@ -483,13 +491,19 @@
         grid-template-columns: 1fr;
       }
 
+      .hero-photo-wrap {
+        width: 160px;
+        margin-top: 32px;
+      }
+
       .hero-photo {
         width: 160px;
         aspect-ratio: 1 / 1;
         border-radius: 50%;
-        margin-top: 32px;
         object-position: center 10%;
       }
+
+      .hero-dither { border-radius: 50%; }
 
       .expertise,
       .partners,
@@ -659,7 +673,9 @@
         <p class="hero-bio">Orchestrating the friction between visionary storytelling and technological scale. I architect complex productions that define the frontier for global brands.</p>
         <a href="#contact" class="hero-cta">Get in touch →</a>
       </div>
-      <img src="Russell_Greene_Headshot.png" alt="Russell Greene" class="hero-photo" />
+      <div class="hero-photo-wrap">
+        <img src="Russell_Greene_Headshot.png" alt="Russell Greene" class="hero-photo" />
+      </div>
     </div>
   </section>
 
@@ -996,6 +1012,7 @@
     cursor.setAttribute('aria-hidden', 'true');
     cursor.innerHTML = pixelSvg(ARROW, 'pixel-arrow') + pixelSvg(HAND, 'pixel-hand') +
       '<span class="pixel-label">View ↗</span>';
+    const label = cursor.querySelector('.pixel-label');
 
     // Fixed pools, reused round-robin — the trail pool size is the on-screen cap
     function makeBits(n) {
@@ -1029,11 +1046,14 @@
       if (!target || !target.closest) return;
       const field = target.closest('.contact-form input, .contact-form textarea');
       const row = !field && target.closest('.work-item');
-      const link = !field && !row && target.closest('a, button');
+      const photo = !field && !row && target.closest('.hero-photo-wrap');
+      const link = !field && !row && !photo && target.closest('a, button');
       overField = !!field;
       root.classList.toggle('cursor-over-field', overField);
-      root.classList.toggle('cursor-view', !!row);
+      root.classList.toggle('cursor-view', !!(row || photo));
       root.classList.toggle('cursor-link', !!link);
+      const text = photo ? 'Enhance' : 'View ↗';
+      if (label.textContent !== text) label.textContent = text;
     }
 
     document.addEventListener('pointermove', e => {
@@ -1078,6 +1098,211 @@
         play(el, i % 2 ? 'is-burst is-blue' : 'is-burst', x, y);
       });
     });
+  })();
+</script>
+
+<script>
+  // DOS headshot — the photo is ordered-dithered onto a canvas above it;
+  // cleared canvas cells let the real photo show through
+  (function () {
+    const wrap = document.querySelector('.hero-photo-wrap');
+    const img = wrap && wrap.querySelector('.hero-photo');
+    if (!wrap || !img) return;
+
+    const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const CELL = 4;     // on-screen size of one dither pixel, in CSS px
+    const REVEAL = 90;  // enhance radius, in CSS px
+    const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+    const INK = [14, 14, 14], GRAY = [154, 154, 154], PAPER = [245, 243, 239], BLUE = [31, 59, 214];
+    // Brightness ramps to dither along: saturated blues get the cobalt, everything else stays neutral.
+    // Blue holds across a wide band so the backdrop reads as solid cobalt, not speckle.
+    const BLUE_RAMP = [[INK, 0], [BLUE, 0.1], [BLUE, 0.5], [PAPER, 0.9]];
+    const GRAY_RAMP = [[INK, 0.1], [GRAY, 0.5], [PAPER, 0.85]];
+    const SHARPEN = 1.2, CONTRAST = 1.5, LIFT = 0.02;
+
+    const canvas = document.createElement('canvas');
+    canvas.className = 'hero-dither';
+    canvas.setAttribute('aria-hidden', 'true');
+    wrap.append(canvas);
+    const ctx = canvas.getContext('2d');
+
+    let cols = 0, rows = 0, dithered = null;
+    let progress = 0;                 // modem load: fraction of rows shown
+    let started = false, onScreen = false;
+    let cx = 0, cy = 0, radius = 0;   // reveal circle, CSS px relative to the photo
+    let frame = 0, stepTimer = 0;
+
+    function objectPosition() {
+      return getComputedStyle(img).objectPosition.split(' ')
+        .map(v => v.endsWith('%') ? parseFloat(v) / 100 : 0.5);
+    }
+
+    function dither() {
+      const w = img.clientWidth, h = img.clientHeight;
+      const iw = img.naturalWidth, ih = img.naturalHeight;
+      // Same crop as object-fit: cover at the photo's object-position
+      const scale = Math.max(w / iw, h / ih);
+      const sw = w / scale, sh = h / scale;
+      const [px, py] = objectPosition();
+
+      const src = document.createElement('canvas');
+      src.width = cols;
+      src.height = rows;
+      const sctx = src.getContext('2d');
+      sctx.imageSmoothingQuality = 'high';
+      sctx.drawImage(img, (iw - sw) * px, (ih - sh) * py, sw, sh, 0, 0, cols, rows);
+
+      const data = sctx.getImageData(0, 0, cols, rows);
+      const d = data.data;
+      const n = cols * rows;
+      const lum = new Float32Array(n), blue = new Uint8Array(n);
+      for (let p = 0; p < n; p++) {
+        const r = d[p * 4], g = d[p * 4 + 1], b = d[p * 4 + 2];
+        lum[p] = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        blue[p] = b - (r + g) / 2 > 70 ? 1 : 0;
+      }
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const p = y * cols + x;
+          let l = lum[p];
+          if (!blue[p]) {
+            // Unsharp mask against the 3x3 neighbourhood, then an S-curve, so eyes and brows survive
+            let sum = 0, count = 0;
+            for (let j = -1; j <= 1; j++) {
+              for (let k = -1; k <= 1; k++) {
+                const yy = y + j, xx = x + k;
+                if (yy >= 0 && yy < rows && xx >= 0 && xx < cols) { sum += lum[yy * cols + xx]; count++; }
+              }
+            }
+            l += SHARPEN * (l - sum / count);
+            l = (l - 0.5) * CONTRAST + 0.5 + LIFT;
+          }
+          const ramp = blue[p] ? BLUE_RAMP : GRAY_RAMP;
+          const t = (BAYER[(y % 4) * 4 + (x % 4)] + 0.5) / 16;
+          let k = 0;
+          while (k < ramp.length - 2 && l > ramp[k + 1][1]) k++;
+          const f = (l - ramp[k][1]) / (ramp[k + 1][1] - ramp[k][1]);
+          const c = ramp[f > t ? k + 1 : k][0];
+          const i = p * 4;
+          d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+        }
+      }
+      dithered = data;
+    }
+
+    function render() {
+      frame = 0;
+      ctx.fillStyle = `rgb(${PAPER})`;
+      if (!dithered) { ctx.fillRect(0, 0, cols, rows); return; }
+      ctx.putImageData(dithered, 0, 0);
+      const shown = Math.ceil(rows * progress);
+      if (shown < rows) ctx.fillRect(0, shown, cols, rows - shown);
+      if (radius <= 0) return;
+      // Clear whole cells whose centres fall inside the circle, so the edge follows the grid
+      const sx = cols / img.clientWidth, sy = rows / img.clientHeight;
+      const y0 = Math.max(0, Math.floor((cy - radius) * sy)), y1 = Math.min(rows - 1, Math.floor((cy + radius) * sy));
+      for (let y = y0; y <= y1; y++) {
+        const dy = (y + 0.5) / sy - cy;
+        if (Math.abs(dy) > radius) continue;
+        const half = Math.sqrt(radius * radius - dy * dy);
+        const xs = Math.max(0, Math.ceil((cx - half) * sx - 0.5));
+        const xe = Math.min(cols - 1, Math.floor((cx + half) * sx - 0.5));
+        if (xe >= xs) ctx.clearRect(xs, y, xe - xs + 1, 1);
+      }
+    }
+
+    function requestRender() {
+      if (!frame) frame = requestAnimationFrame(render);
+    }
+
+    function layout() {
+      const c = Math.max(1, Math.round(img.clientWidth / CELL));
+      const r = Math.max(1, Math.round(img.clientHeight / CELL));
+      if (c === cols && r === rows) return;
+      cols = c;
+      rows = r;
+      canvas.width = cols;
+      canvas.height = rows;
+      if (dithered) dither();
+      render();
+    }
+
+    // Dial-up reveal: stepped bands top to bottom, once per page load
+    function maybeStart() {
+      if (started || !dithered || !onScreen) return;
+      started = true;
+      if (reduceMotion.matches) { progress = 1; render(); return; }
+      const BANDS = 12;
+      let band = 0;
+      const timer = setInterval(() => {
+        band++;
+        progress = band / BANDS;
+        render();
+        if (band === BANDS) clearInterval(timer);
+      }, 1200 / BANDS);
+    }
+
+    function stepRadius(to, steps, ms) {
+      clearInterval(stepTimer);
+      if (reduceMotion.matches) { radius = to; render(); return; }
+      const from = radius;
+      let i = 0;
+      stepTimer = setInterval(() => {
+        i++;
+        radius = from + (to - from) * i / steps;
+        render();
+        if (i === steps) clearInterval(stepTimer);
+      }, ms / steps);
+    }
+
+    function pointAt(e) {
+      const r = img.getBoundingClientRect();
+      cx = e.clientX - r.left;
+      cy = e.clientY - r.top;
+    }
+
+    function onLoad() {
+      dither();
+      render();
+      maybeStart();
+    }
+
+    layout();
+    new ResizeObserver(layout).observe(img);
+
+    const io = new IntersectionObserver(entries => {
+      onScreen = entries.some(e => e.isIntersecting);
+      maybeStart();
+      if (started) io.disconnect();
+    });
+    io.observe(wrap);
+
+    if (img.complete && img.naturalWidth) onLoad();
+    else {
+      img.addEventListener('load', onLoad);
+      img.addEventListener('error', () => canvas.remove()); // fall back to the plain <img>
+    }
+
+    if (fine) {
+      wrap.addEventListener('pointermove', e => {
+        clearInterval(stepTimer);
+        pointAt(e);
+        radius = REVEAL;
+        requestRender();
+      });
+      wrap.addEventListener('pointerleave', () => stepRadius(0, 5, 250));
+    } else {
+      // Touch: tap toggles between the dither and the real photo
+      let open = false;
+      wrap.addEventListener('click', e => {
+        pointAt(e);
+        open = !open;
+        stepRadius(open ? Math.hypot(img.clientWidth, img.clientHeight) : 0, 4, 200);
+      });
+    }
   })();
 </script>
 
