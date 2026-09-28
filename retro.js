@@ -338,9 +338,8 @@ function projectName(row) {
   });
 })();
 
-// Retro headshot — the photo is DOS-dithered onto a canvas above it. On hover (or tap) a colour
-// mosaic resolves tier by tier, then the cells clear to show the real photo. ?reveal=whole (default)
-// resolves the entire image; ?reveal=circle resolves a spotlight around the pointer.
+// Retro headshot — the photo is DOS-dithered onto a canvas above it. On hover (or tap) the whole
+// image resolves through a colour mosaic tier by tier, then the canvas clears to show the real photo.
 (function () {
   const wrap = document.querySelector('.hero-photo-wrap');
   const img = wrap && wrap.querySelector('.hero-photo');
@@ -351,9 +350,8 @@ function projectName(row) {
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   const CELL = 4;                 // on-screen size of one dither pixel, in CSS px
-  const REVEAL = 90;              // reveal radius, in CSS px
   const TIER_MS = 250;            // time per mosaic tier
-  const REVERSE_MS = 80;          // time per tier when a whole-image reveal steps back down
+  const REVERSE_MS = 80;          // time per tier when the reveal steps back down
   const TIER_BLOCKS = [4, 2, 1];  // mosaic block size in cells (16px, 8px, 4px), then the real photo
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
   const INK = [14, 14, 14], GRAY = [154, 154, 154], PAPER = [245, 243, 239], BLUE = [31, 59, 214];
@@ -373,12 +371,7 @@ function projectName(row) {
   let cols = 0, rows = 0, dithered = null, tiers = [];
   let progress = 0;                     // modem load: fraction of rows shown
   let started = false, onScreen = false;
-  let cx = 0, cy = 0, radius = 0;       // reveal circle, CSS px relative to the photo
-  let level = TIER_BLOCKS.length;       // current mosaic tier; TIER_BLOCKS.length = real photo
-  let frame = 0, stepTimer = 0, tierTimer = 0;
-
-  const mode = new URLSearchParams(location.search).get('reveal') === 'circle' ? 'circle' : 'whole';
-  // Whole mode: 0 = dither, 1..TIER_BLOCKS.length = mosaic tiers, TIER_BLOCKS.length + 1 = real photo
+  // Reveal stage: 0 = dither, 1..TIER_BLOCKS.length = mosaic tiers, TIER_BLOCKS.length + 1 = real photo
   const PHOTO_STAGE = TIER_BLOCKS.length + 1;
   let stage = 0, stageTimer = 0;
 
@@ -480,38 +473,15 @@ function projectName(row) {
   }
 
   function render() {
-    frame = 0;
     ctx.fillStyle = `rgb(${PAPER})`;
     if (!dithered) { ctx.fillRect(0, 0, cols, rows); return; }
     ctx.putImageData(dithered, 0, 0);
     const shown = Math.ceil(rows * progress);
     if (shown < rows) ctx.fillRect(0, shown, cols, rows - shown);
-    if (mode === 'whole') {
-      // The whole image (as far as the dial-up load has drawn) shows the current stage
-      const tier = stage > 0 && tiers[stage - 1];
-      if (tier) ctx.putImageData(tier, 0, 0, 0, 0, cols, shown);
-      else if (stage === PHOTO_STAGE) ctx.clearRect(0, 0, cols, shown);
-      return;
-    }
-    if (radius <= 0) return;
-    // Fill whole cells whose centres fall inside the circle, so the edge follows the grid
-    const tier = tiers[level];
-    const sx = cols / img.clientWidth, sy = rows / img.clientHeight;
-    const y0 = Math.max(0, Math.floor((cy - radius) * sy)), y1 = Math.min(rows - 1, Math.floor((cy + radius) * sy));
-    for (let y = y0; y <= y1; y++) {
-      const dy = (y + 0.5) / sy - cy;
-      if (Math.abs(dy) > radius) continue;
-      const half = Math.sqrt(radius * radius - dy * dy);
-      const xs = Math.max(0, Math.ceil((cx - half) * sx - 0.5));
-      const xe = Math.min(cols - 1, Math.floor((cx + half) * sx - 0.5));
-      if (xe < xs) continue;
-      if (tier) ctx.putImageData(tier, 0, 0, xs, y, xe - xs + 1, 1);
-      else ctx.clearRect(xs, y, xe - xs + 1, 1);
-    }
-  }
-
-  function requestRender() {
-    if (!frame) frame = requestAnimationFrame(render);
+    // The whole image (as far as the dial-up load has drawn) shows the current stage
+    const tier = stage > 0 && tiers[stage - 1];
+    if (tier) ctx.putImageData(tier, 0, 0, 0, 0, cols, shown);
+    else if (stage === PHOTO_STAGE) ctx.clearRect(0, 0, cols, shown);
   }
 
   function layout() {
@@ -541,46 +511,12 @@ function projectName(row) {
     }, 1200 / BANDS);
   }
 
-  function stepRadius(to, steps, ms) {
-    clearInterval(stepTimer);
-    if (reduceMotion.matches) { radius = to; render(); return; }
-    const from = radius;
-    let i = 0;
-    stepTimer = setInterval(() => {
-      i++;
-      radius = from + (to - from) * i / steps;
-      render();
-      if (i === steps) clearInterval(stepTimer);
-    }, ms / steps);
-  }
-
   // The hourglass cursor shows while a hover reveal is still resolving
   function waiting(on) {
     if (fine) root.classList.toggle('cursor-wait', on);
   }
 
-  // Each reveal session resolves from the coarsest mosaic to the real photo
-  function startTiers() {
-    clearInterval(tierTimer);
-    level = reduceMotion.matches ? TIER_BLOCKS.length : 0;
-    waiting(level < TIER_BLOCKS.length);
-    if (level >= TIER_BLOCKS.length) return;
-    tierTimer = setInterval(() => {
-      level++;
-      requestRender();
-      if (level >= TIER_BLOCKS.length) {
-        clearInterval(tierTimer);
-        waiting(false);
-      }
-    }, TIER_MS);
-  }
-
-  function stopTiers() {
-    clearInterval(tierTimer);
-    waiting(false);
-  }
-
-  // Whole mode: step one stage at a time toward `target`, starting now. Resolving shows the
+  // Step one stage at a time toward `target`, starting now. Resolving shows the
   // hourglass; stepping back down doesn't. Either can start from wherever the last one stopped.
   function stepStage(target, ms) {
     clearInterval(stageTimer);
@@ -601,12 +537,6 @@ function projectName(row) {
     };
     step();
     if (stage !== target) stageTimer = setInterval(step, ms);
-  }
-
-  function pointAt(e) {
-    const r = img.getBoundingClientRect();
-    cx = e.clientX - r.left;
-    cy = e.clientY - r.top;
   }
 
   function onLoad() {
@@ -631,46 +561,19 @@ function projectName(row) {
     img.addEventListener('error', () => canvas.remove()); // fall back to the plain <img>
   }
 
-  if (mode === 'whole') {
-    if (fine) {
-      wrap.addEventListener('pointerenter', e => {
-        if (e.pointerType !== 'touch') stepStage(PHOTO_STAGE, TIER_MS);
-      });
-      wrap.addEventListener('pointerleave', e => {
-        if (e.pointerType !== 'touch') stepStage(0, REVERSE_MS);
-      });
-    } else {
-      // Touch: tap runs the tiers forward, tap again runs them back
-      let open = false;
-      wrap.addEventListener('click', () => {
-        open = !open;
-        stepStage(open ? PHOTO_STAGE : 0, open ? TIER_MS : REVERSE_MS);
-      });
-    }
-  } else if (fine) {
+  if (fine) {
     wrap.addEventListener('pointerenter', e => {
-      if (e.pointerType !== 'touch') startTiers();
+      if (e.pointerType !== 'touch') stepStage(PHOTO_STAGE, TIER_MS);
     });
-    wrap.addEventListener('pointermove', e => {
-      if (e.pointerType === 'touch') return;
-      clearInterval(stepTimer);
-      pointAt(e);
-      radius = REVEAL;
-      requestRender();
-    });
-    wrap.addEventListener('pointerleave', () => {
-      stopTiers();
-      stepRadius(0, 5, 250);
+    wrap.addEventListener('pointerleave', e => {
+      if (e.pointerType !== 'touch') stepStage(0, REVERSE_MS);
     });
   } else {
-    // Touch: tap toggles between the dither and the real photo, resolving through the tiers
+    // Touch: tap runs the tiers forward, tap again runs them back
     let open = false;
-    wrap.addEventListener('click', e => {
-      pointAt(e);
+    wrap.addEventListener('click', () => {
       open = !open;
-      if (open) startTiers();
-      else stopTiers();
-      stepRadius(open ? Math.hypot(img.clientWidth, img.clientHeight) : 0, 4, 200);
+      stepStage(open ? PHOTO_STAGE : 0, open ? TIER_MS : REVERSE_MS);
     });
   }
 })();
