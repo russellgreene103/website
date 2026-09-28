@@ -163,7 +163,9 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 @media (prefers-reduced-motion: reduce) {
   html.cursor-link .pixel-hand,
   .dos-window.is-open,
-  .dos-window.is-closing { animation: none; }
+  .dos-window.is-closing,
+  .work-card.is-open,
+  .work-card.is-closing { animation: none; }
 }
 
 /* Dithered DOS layer drawn over the photo by JS; cleared cells let the real photo through */
@@ -381,6 +383,80 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
   .block-cursor,
   .dos-term-overlay.is-open .dos-term,
   .dos-term-overlay.is-closing .dos-term { animation: none; }
+}
+
+/* Work preview card (fine pointers only; element added by JS) */
+.work-card {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9997;
+  display: none;
+  pointer-events: none;
+  padding: 3px;
+  background: var(--pixel);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.work-card.is-open,
+.work-card.is-closing { display: block; }
+.work-card.is-open { animation: dos-open 120ms steps(1, end) both; }
+.work-card.is-closing { animation: dos-close 120ms steps(1, end) both; }
+
+.work-card-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 5px 5px;
+  font-family: 'Silkscreen', var(--mono);
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--paper);
+}
+
+.work-card-media {
+  position: relative;
+  width: 320px;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--pixel);
+}
+
+.work-card-media img,
+.work-card-media canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.work-card-media img { object-fit: cover; }
+.work-card-media canvas { image-rendering: pixelated; }
+.work-card-media canvas[hidden] { display: none; }
+
+/* No usable media: a cobalt card with the client name in the pixel font */
+.work-card-fallback {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  font-family: 'Silkscreen', var(--mono);
+  font-size: 16px;
+  text-transform: uppercase;
+  color: var(--paper);
+}
+
+.work-card.is-missing .work-card-fallback { display: grid; }
+.work-card.is-missing img { visibility: hidden; }
+
+/* Collapsible work list: hidden rows are gone entirely; the button sits under the rows' column */
+.work-item[hidden] { display: none; }
+.work-more {
+  grid-column: -2 / -1;
+  margin-top: 24px;
 }
 
 /* Letter-grid pixel icons (see gridSvg in retro.js) */

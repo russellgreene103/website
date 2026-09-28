@@ -47,6 +47,7 @@ const PIXEL_ICONS = (() => {
   }).join(''));
   const ENVELOPE_BODY = ['CCCCCCCCCC', 'CC......CC', 'C.C....C.C', 'C..C..C..C', 'C...CC...C', 'C........C', 'CCCCCCCCCC'];
   const ENVELOPE_OPEN = ['....CC....', '..CC..CC..', 'CC......CC', 'C........C', 'C..C..C..C', 'C...CC...C', 'C........C', 'C........C', 'CCCCCCCCCC'];
+  const ARROW_DOWN = ['..C..', '..C..', '..C..', 'CCCCC', '.CCC.', '..C..'];
   const ENTER = ['........C.', '........C.', '..C.....C.', '.CC.....C.', 'CCCCCCCCC.', '.CC.......', '..C.......'];
   return {
     people: [stamp(11, 10, [[person('I'), 0, 3], [person('P'), 4, 2], [person('I'), 8, 3]]),
@@ -57,6 +58,8 @@ const PIXEL_ICONS = (() => {
     blocks: [stamp(10, 10, [[BLOCK, 1, 7], [BLOCK, 5, 7], [TOP, 3, 4]]), stamp(10, 10, [[BLOCK, 1, 7], [BLOCK, 5, 7], [TOP, 3, 1]])],
     envelope: [stamp(10, 9, [[ENVELOPE_BODY, 0, 2]]), ENVELOPE_OPEN],
     enter: [stamp(11, 7, [[ENTER, 1, 0]]), stamp(11, 7, [[ENTER, 0, 0]])],
+    arrowDown: [stamp(5, 7, [[ARROW_DOWN, 0, 0]]), stamp(5, 7, [[ARROW_DOWN, 0, 1]])],
+    arrowUp: [stamp(5, 7, [[[...ARROW_DOWN].reverse(), 0, 1]]), stamp(5, 7, [[[...ARROW_DOWN].reverse(), 0, 0]])],
   };
 })();
 
@@ -190,19 +193,13 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
   let mx = 0, my = 0, lastX = 0, lastY = 0, travel = 0, nextBit = 0;
   let seen = false, overField = false;
 
-  // DOS preview window: follows the pointer over list rows and types out the row's details
+  // Row previews that follow the pointer: work rows get a media card, /vibe project rows get a
+  // DOS window that types out their details
   const OPEN_MS = 120, TYPE_MS = 150;
   const pad = n => String(n).padStart(2, '0');
-  // Each row type: how to find it, its link, and what the window says about it
+  // Each row type: how to find it, its link, and how it previews (a media card, or what the window says)
   const ROW_TYPES = [
-    {
-      selector: '.work-item',
-      link: '.work-link',
-      describe: row => {
-        const client = textOf(row, '.work-client');
-        return { name: client, fields: [['Project:', textOf(row, '.work-title')], ['Client:', client]], notes: [] };
-      },
-    },
+    { selector: '.work-item', link: '.work-link', card: true },
     {
       selector: '.project-item',
       link: '.project-link',
@@ -214,12 +211,13 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
     },
   ];
   const ROW_SELECTOR = ROW_TYPES.map(t => t.selector).join(', ');
+  const WINDOW_SELECTOR = ROW_TYPES.filter(t => t.describe).map(t => t.selector).join(', ');
   const rowType = row => ROW_TYPES.find(t => row.matches(t.selector));
 
   let win = null, winName = null, winBody = null, cells = [];
   let activeRow = null, winW = 0, winH = 0, typeTimer = 0, typeTick = 0;
 
-  if (document.querySelector(ROW_SELECTOR)) {
+  if (document.querySelector(WINDOW_SELECTOR)) {
     win = document.createElement('div');
     win.className = 'dos-window';
     win.setAttribute('aria-hidden', 'true');
@@ -300,14 +298,17 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
   }
 
   // 20px right and 16px below the pointer, flipping left or up at the viewport edges
+  function follow(el, w, h) {
+    const flipX = mx + 20 + w + 6 > innerWidth;
+    const flipY = my + 16 + h + 6 > innerHeight;
+    const x = flipX ? mx - 20 - w : mx + 20;
+    const y = flipY ? my - 16 - h : my + 16;
+    el.style.translate = `${Math.round(x)}px ${Math.round(y)}px`;
+    el.style.transformOrigin = `${flipX ? 'right' : 'left'} ${flipY ? 'bottom' : 'top'}`;
+  }
+
   function placeWindow() {
-    if (!win || !win.classList.contains('is-open')) return;
-    const flipX = mx + 20 + winW + 6 > innerWidth;
-    const flipY = my + 16 + winH + 6 > innerHeight;
-    const x = flipX ? mx - 20 - winW : mx + 20;
-    const y = flipY ? my - 16 - winH : my + 16;
-    win.style.translate = `${Math.round(x)}px ${Math.round(y)}px`;
-    win.style.transformOrigin = `${flipX ? 'right' : 'left'} ${flipY ? 'bottom' : 'top'}`;
+    if (win && win.classList.contains('is-open')) follow(win, winW, winH);
   }
 
   function showWindow(row) {
@@ -326,6 +327,134 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
     typeWindow(wasOpen ? 0 : OPEN_MS);
   }
 
+
+  // Work preview card: the case study image in a DOS frame, resolving through mosaic tiers
+  // (the headshot's 16px, 8px, 4px blocks, then the real image) each time it shows a new row
+  const CARD_W = 320, CARD_H = 200, CARD_TIERS = [16, 8, 4], CARD_STEP_MS = 70;
+  const workRows = [...document.querySelectorAll('.work-item[data-media]')];
+  const mediaCache = new Map(); // url → Image, loading or loaded
+  let card = null, cardImg, cardMosaic, cardName, cardCount, cardFallback;
+  let cardRow = null, cardW = 0, cardH = 0, cardToken = 0, mosaicTimer = 0;
+
+  function loadMedia(url) {
+    if (!mediaCache.has(url)) {
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = url;
+      mediaCache.set(url, img);
+    }
+    return mediaCache.get(url);
+  }
+
+  if (workRows.length) {
+    card = document.createElement('div');
+    card.className = 'work-card';
+    card.setAttribute('aria-hidden', 'true');
+    card.innerHTML =
+      '<div class="work-card-bar"><span class="work-card-name"></span><span class="work-card-count"></span></div>' +
+      '<div class="work-card-media"><img alt=""><canvas></canvas><span class="work-card-fallback"></span></div>';
+    document.body.append(card);
+    cardImg = card.querySelector('img');
+    cardMosaic = card.querySelector('canvas');
+    cardMosaic.width = CARD_W;
+    cardMosaic.height = CARD_H;
+    cardName = card.querySelector('.work-card-name');
+    cardCount = card.querySelector('.work-card-count');
+    cardFallback = card.querySelector('.work-card-fallback');
+    card.addEventListener('animationend', () => {
+      if (card.classList.contains('is-closing')) card.className = 'work-card';
+    });
+    document.fonts.load("8px 'Silkscreen'"); // the title bar's font, ready before the first hover
+
+    // Preload once the page is idle: rows in view first, then the rest, one at a time
+    const preload = () => {
+      const inView = workRows.filter(r => {
+        const b = r.getBoundingClientRect();
+        return !r.hidden && b.bottom > 0 && b.top < innerHeight;
+      });
+      const queue = [...inView, ...workRows.filter(r => !inView.includes(r))];
+      const next = () => {
+        const row = queue.shift();
+        if (!row) return;
+        const img = loadMedia(row.dataset.media);
+        if (img.complete) next();
+        else ['load', 'error'].forEach(type => img.addEventListener(type, next, { once: true }));
+      };
+      next();
+    };
+    const whenIdle = fn => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 3000 }) : setTimeout(fn, 1500));
+    if (document.readyState === 'complete') whenIdle(preload);
+    else window.addEventListener('load', () => whenIdle(preload), { once: true });
+  }
+
+  // One mosaic tier: the image cover-cropped into the frame at one sample per block, blown back up
+  function drawMosaic(img, block) {
+    const cols = Math.ceil(CARD_W / block), rows = Math.ceil(CARD_H / block);
+    const small = document.createElement('canvas');
+    small.width = cols;
+    small.height = rows;
+    const sctx = small.getContext('2d');
+    sctx.imageSmoothingQuality = 'high';
+    const scale = Math.max(CARD_W / img.naturalWidth, CARD_H / img.naturalHeight);
+    const sw = CARD_W / scale, sh = CARD_H / scale;
+    sctx.drawImage(img, (img.naturalWidth - sw) / 2, (img.naturalHeight - sh) / 2, sw, sh, 0, 0, cols, rows);
+    const ctx = cardMosaic.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(small, 0, 0, cols * block, rows * block);
+  }
+
+  function showCard(row) {
+    if (!card || row === cardRow) return;
+    const wasOpen = !!cardRow;
+    cardRow = row;
+    const token = ++cardToken; // later rows win; anything still pending for an older row stops
+    clearTimeout(mosaicTimer);
+    if (!row) {
+      card.className = reduceMotion.matches ? 'work-card' : 'work-card is-closing';
+      return;
+    }
+    if (!wasOpen) card.className = 'work-card is-open';
+    card.classList.remove('is-missing');
+
+    const client = textOf(row, '.work-client');
+    const all = [...document.querySelectorAll('.work-item')];
+    cardName.textContent = `[■] ${client}`;
+    cardCount.textContent = `${pad(all.indexOf(row) + 1)}/${pad(all.length)}`;
+    cardFallback.textContent = client;
+
+    const img = loadMedia(row.dataset.media);
+    cardImg.src = img.src;
+    // Cover the frame in cobalt until this row's image is ready to resolve
+    const ctx = cardMosaic.getContext('2d');
+    ctx.fillStyle = getComputedStyle(root).getPropertyValue('--pixel').trim() || '#1f3bd6';
+    ctx.fillRect(0, 0, CARD_W, CARD_H);
+    cardMosaic.hidden = false;
+
+    const resolve = () => {
+      if (token !== cardToken) return;
+      if (!img.naturalWidth) { card.classList.add('is-missing'); cardMosaic.hidden = true; return; }
+      if (reduceMotion.matches) { cardMosaic.hidden = true; return; }
+      let k = 0;
+      const step = () => {
+        if (token !== cardToken) return;
+        if (k < CARD_TIERS.length) {
+          drawMosaic(img, CARD_TIERS[k++]);
+          mosaicTimer = setTimeout(step, CARD_STEP_MS);
+        } else cardMosaic.hidden = true;
+      };
+      step();
+    };
+    if (img.complete) resolve();
+    else ['load', 'error'].forEach(type => img.addEventListener(type, resolve, { once: true }));
+
+    if (!cardW) { cardW = card.offsetWidth; cardH = card.offsetHeight; }
+    placeCard();
+  }
+
+  function placeCard() {
+    if (card && card.classList.contains('is-open')) follow(card, cardW, cardH);
+  }
+
   function setState(target) {
     if (!target || !target.closest) return;
     const field = target.closest('input, textarea, [data-hide-cursor]');
@@ -334,7 +463,9 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
     overField = !!field;
     root.classList.toggle('cursor-over-field', overField);
     root.classList.toggle('cursor-link', !!link);
-    showWindow(row || null);
+    const usesCard = !!row && !!rowType(row).card;
+    showCard(usesCard ? row : null);
+    showWindow(row && !usesCard ? row : null);
   }
 
   document.addEventListener('pointermove', e => {
@@ -345,6 +476,7 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
     root.classList.add('cursor-visible');
     setState(e.target);
     placeWindow();
+    placeCard();
 
     if (!seen) { lastX = mx; lastY = my; seen = true; return; }
     travel += Math.hypot(mx - lastX, my - lastY);
@@ -371,6 +503,7 @@ document.querySelectorAll('[data-icon]').forEach(slot => {
     if (e.relatedTarget) return;
     root.classList.remove('cursor-visible');
     showWindow(null);
+    showCard(null);
   });
 
   // Whole list rows open their link; the link itself still handles its own clicks and keyboard use
@@ -1595,4 +1728,59 @@ const retroTerminal = (function () {
   }
 
   document.fonts.ready.then(schedule);
+})();
+
+// Work list: the first six rows, then a DOS button that lists the rest in, one row at a time.
+// Without JS every row shows and there's no button.
+(function () {
+  const list = document.getElementById('work-list');
+  const rows = list ? [...list.querySelectorAll('.work-item')] : [];
+  const SHOWN = 6, ROW_MS = 40;
+  if (rows.length <= SHOWN) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const extra = rows.slice(SHOWN);
+  extra.forEach(row => { row.hidden = true; });
+
+  const wrap = document.createElement('div');
+  wrap.className = 'work-more';
+  wrap.innerHTML =
+    `<button type="button" class="dos-button" aria-controls="${list.id}" aria-expanded="false">` +
+      '<span class="dos-button-icon" aria-hidden="true"></span><span class="dos-button-label"></span>' +
+      '<b class="block-cursor dos-button-cursor" aria-hidden="true"></b>' +
+    '</button>';
+  list.after(wrap);
+  const button = wrap.querySelector('button');
+  const icon = button.querySelector('.dos-button-icon');
+  const label = button.querySelector('.dos-button-label');
+  let timer = 0;
+
+  function render(expanded) {
+    button.setAttribute('aria-expanded', String(expanded));
+    label.textContent = expanded ? 'Show less' : `Show all ${rows.length}`;
+    icon.innerHTML = PIXEL_ICONS[expanded ? 'arrowUp' : 'arrowDown'].map(f => gridSvg(f)).join('');
+  }
+  render(false);
+
+  button.addEventListener('click', () => {
+    clearInterval(timer);
+    const expanded = button.getAttribute('aria-expanded') !== 'true';
+    render(expanded);
+    if (!expanded) {
+      extra.forEach(row => { row.hidden = true; });
+      if (list.getBoundingClientRect().top < 0) list.scrollIntoView({ block: 'start' });
+      return;
+    }
+    if (reduceMotion.matches) {
+      extra.forEach(row => { row.hidden = false; });
+      return;
+    }
+    // Rows scroll in like a directory listing
+    let i = 0;
+    const reveal = () => {
+      extra[i++].hidden = false;
+      if (i >= extra.length) clearInterval(timer);
+    };
+    reveal();
+    timer = setInterval(reveal, ROW_MS);
+  });
 })();
