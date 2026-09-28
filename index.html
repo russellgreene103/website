@@ -570,22 +570,51 @@
       display: none;
     }
 
-    .pixel-label {
-      position: absolute;
-      left: 26px;
-      top: 20px;
+    /* DOS preview window over work rows (fine pointers only; element added by JS) */
+    .dos-window {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 9997;
       display: none;
+      pointer-events: none;
+      padding: 3px;
+      background: var(--pixel);
+      color: var(--paper);
+      box-shadow: 6px 6px 0 var(--ink); /* text-mode shadow, one cell down and right */
       font-family: 'Silkscreen', var(--mono);
       font-size: 8px;
       line-height: 1;
       letter-spacing: 0.05em;
-      color: var(--paper);
-      background: var(--pixel);
-      padding: 5px 6px 4px;
-      box-shadow: 1px 1px 0 var(--ink), 2px 2px 0 var(--ink);
+      text-transform: uppercase;
       white-space: nowrap;
-      transform-origin: 0 0;
     }
+
+    .dos-window.is-open,
+    .dos-window.is-closing { display: block; }
+    .dos-window.is-open { animation: dos-open 120ms steps(1, end) both; }
+    .dos-window.is-closing { animation: dos-close 120ms steps(1, end) both; }
+
+    .dos-frame { border: 3px double var(--paper); }
+
+    .dos-title {
+      display: flex;
+      gap: 6px;
+      background: var(--paper);
+      color: var(--pixel);
+      padding: 3px 5px 2px;
+    }
+
+    .dos-body {
+      display: grid;
+      grid-template-columns: auto auto;
+      justify-content: start;
+      gap: 5px 8px;
+      padding: 7px 8px 8px;
+    }
+
+    .dos-body span { min-height: 8px; }
+    .dos-body .dos-wide { grid-column: 1 / -1; }
 
     .pixel-bit {
       position: fixed;
@@ -619,11 +648,6 @@
       animation: pixel-bob 0.5s steps(1, end) infinite;
     }
 
-    html.cursor-view .pixel-label {
-      display: block;
-      animation: pixel-pop 150ms steps(1, end) both;
-    }
-
     html.cursor-wait .pixel-arrow { display: none; }
     html.cursor-wait .pixel-hourglass { display: block; }
     html.cursor-wait .pixel-hourglass svg { animation: pixel-sand 1s steps(1, end) infinite; }
@@ -642,10 +666,16 @@
       100% { transform: translateY(0); }
     }
 
-    @keyframes pixel-pop {
-      0%       { scale: 0; }
-      33%      { scale: 0.6; }
+    @keyframes dos-open {
+      0%        { scale: 0; }
+      33%       { scale: 0.5; }
       66%, 100% { scale: 1; }
+    }
+
+    @keyframes dos-close {
+      0%        { scale: 1; }
+      33%       { scale: 0.5; }
+      66%, 100% { scale: 0; }
     }
 
     /* Size and fall share one transform so shrinking doesn't also shorten the drop */
@@ -667,7 +697,8 @@
 
     @media (prefers-reduced-motion: reduce) {
       html.cursor-link .pixel-hand,
-      html.cursor-view .pixel-label { animation: none; }
+      .dos-window.is-open,
+      .dos-window.is-closing { animation: none; }
     }
   </style>
 </head>
@@ -1065,8 +1096,7 @@
     cursor.className = 'pixel-cursor';
     cursor.setAttribute('aria-hidden', 'true');
     cursor.innerHTML = pixelSvg(ARROW, 'pixel-arrow') + pixelSvg(HAND, 'pixel-hand') +
-      `<div class="pixel-hourglass">${SAND.map(f => pixelSvg(hourglass(f), '')).join('')}</div>` +
-      '<span class="pixel-label">View ↗</span>';
+      `<div class="pixel-hourglass">${SAND.map(f => pixelSvg(hourglass(f), '')).join('')}</div>`;
 
     // Fixed pools, reused round-robin — the trail pool size is the on-screen cap
     function makeBits(n) {
@@ -1096,15 +1126,116 @@
     let mx = 0, my = 0, lastX = 0, lastY = 0, travel = 0, nextBit = 0;
     let seen = false, overField = false;
 
+    // DOS preview window: follows the pointer over work rows and types out the row's details
+    const OPEN_MS = 120, TYPE_MS = 150;
+    const workRows = [...document.querySelectorAll('.work-item')];
+    const pad = n => String(n).padStart(2, '0');
+    const win = document.createElement('div');
+    win.className = 'dos-window';
+    win.setAttribute('aria-hidden', 'true');
+    win.innerHTML =
+      '<div class="dos-frame">' +
+        '<div class="dos-title"><span>[■]</span><span class="dos-name"></span></div>' +
+        '<div class="dos-body">' +
+          '<span></span><span></span><span></span><span></span>' +
+          '<span class="dos-wide"></span><span class="dos-wide"></span>' +
+        '</div>' +
+      '</div>';
+    document.body.append(win);
+    const winName = win.querySelector('.dos-name');
+    const winCells = [...win.querySelectorAll('.dos-body span')];
+    let activeRow = null, winW = 0, winH = 0, typeTimer = 0, typeTick = 0;
+
+    function fillWindow(row) {
+      const title = row.querySelector('.work-title').textContent.trim();
+      const client = row.querySelector('.work-client').textContent.trim();
+      const texts = [
+        'Project:', title,
+        'Client:', client,
+        `File ${pad(workRows.indexOf(row) + 1)}/${pad(workRows.length)}`,
+        'Click to open ↗',
+      ];
+      winName.textContent = client;
+      // Size to the fully typed content, then blank it for typing
+      win.style.width = '';
+      winCells.forEach((el, i) => { el.textContent = texts[i]; });
+      winW = win.offsetWidth;
+      winH = win.offsetHeight;
+      win.style.width = `${winW}px`;
+      return texts;
+    }
+
+    function stopTyping() {
+      clearTimeout(typeTimer);
+      clearInterval(typeTick);
+    }
+
+    function typeWindow(texts, delay) {
+      stopTyping();
+      if (reduceMotion.matches) return;
+      winCells.forEach(el => { el.textContent = ''; });
+      const total = texts.reduce((n, t) => n + t.length, 0);
+      typeTimer = setTimeout(() => {
+        const start = performance.now();
+        typeTick = setInterval(() => {
+          let shown = Math.min(total, Math.ceil(total * (performance.now() - start) / TYPE_MS));
+          if (shown >= total) clearInterval(typeTick);
+          winCells.forEach((el, i) => {
+            const k = Math.min(texts[i].length, shown);
+            el.textContent = texts[i].slice(0, k);
+            shown -= k;
+          });
+        }, 16);
+      }, delay);
+    }
+
+    // 20px right and 16px below the pointer, flipping left or up at the viewport edges
+    function placeWindow() {
+      if (!win.classList.contains('is-open')) return;
+      const flipX = mx + 20 + winW + 6 > innerWidth;
+      const flipY = my + 16 + winH + 6 > innerHeight;
+      const x = flipX ? mx - 20 - winW : mx + 20;
+      const y = flipY ? my - 16 - winH : my + 16;
+      win.style.translate = `${Math.round(x)}px ${Math.round(y)}px`;
+      win.style.transformOrigin = `${flipX ? 'right' : 'left'} ${flipY ? 'bottom' : 'top'}`;
+    }
+
+    function showWindow(row) {
+      if (row === activeRow) return;
+      const wasOpen = !!activeRow;
+      activeRow = row;
+      if (!row) {
+        stopTyping();
+        win.className = reduceMotion.matches ? 'dos-window' : 'dos-window is-closing';
+        return;
+      }
+      if (!wasOpen) win.className = 'dos-window is-open';
+      const texts = fillWindow(row);
+      placeWindow();
+      // Opening waits for the stepped scale; switching rows blanks for a frame and retypes
+      typeWindow(texts, wasOpen ? 0 : OPEN_MS);
+    }
+
+    // Nothing else uses Silkscreen, so load it up front; the window is sized from its metrics
+    document.fonts.load("8px 'Silkscreen'").then(() => {
+      if (!activeRow) return;
+      fillWindow(activeRow);
+      placeWindow();
+    });
+
+    win.addEventListener('animationend', () => {
+      if (win.classList.contains('is-closing')) win.className = 'dos-window';
+    });
+
     function setState(target) {
       if (!target || !target.closest) return;
       const field = target.closest('.contact-form input, .contact-form textarea');
       const row = !field && target.closest('.work-item');
-      const link = !field && !row && target.closest('a, button');
+      const link = !field && (row || target.closest('a, button'));
       overField = !!field;
       root.classList.toggle('cursor-over-field', overField);
-      root.classList.toggle('cursor-view', !!row);
       root.classList.toggle('cursor-link', !!link);
+      showWindow(row || null);
     }
 
     document.addEventListener('pointermove', e => {
@@ -1114,6 +1245,7 @@
       cursor.style.translate = `${Math.round(mx)}px ${Math.round(my)}px`;
       root.classList.add('cursor-visible');
       setState(e.target);
+      placeWindow();
 
       if (!seen) { lastX = mx; lastY = my; seen = true; return; }
       travel += Math.hypot(mx - lastX, my - lastY);
@@ -1137,7 +1269,18 @@
     }, { passive: true });
 
     document.addEventListener('mouseout', e => {
-      if (!e.relatedTarget) root.classList.remove('cursor-visible');
+      if (e.relatedTarget) return;
+      root.classList.remove('cursor-visible');
+      showWindow(null);
+    });
+
+    // Whole work rows open their link; the link itself still handles its own clicks and keyboard use
+    document.addEventListener('click', e => {
+      if (e.pointerType === 'touch' || !e.target.closest) return;
+      const row = e.target.closest('.work-item');
+      if (!row || e.target.closest('a')) return;
+      const link = row.querySelector('.work-link');
+      if (link) window.open(link.href, '_blank', 'noopener');
     });
 
     document.addEventListener('mousedown', e => {
