@@ -510,6 +510,91 @@
 
       footer { flex-direction: column; gap: 8px; text-align: center; }
     }
+
+    /* ── Custom cursor (fine pointers only; elements are added by JS) ── */
+    .cursor-dot,
+    .cursor-ring {
+      position: fixed;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0;
+    }
+
+    .cursor-dot {
+      width: 6px;
+      height: 6px;
+      margin: -3px 0 0 -3px;
+      border-radius: 50%;
+      background: var(--ink);
+      transition: opacity 0.25s ease, scale 0.25s ease;
+    }
+
+    .cursor-ring {
+      width: 0;
+      height: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .cursor-ring-shape {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--ink);
+      border-radius: 999px;
+      background-color: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: translate(-50%, -50%);
+      transition: width 0.25s ease, height 0.25s ease, transform 0.25s ease,
+                  background-color 0.25s ease, scale 0.15s ease;
+    }
+
+    .cursor-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--paper);
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    html.has-cursor,
+    html.has-cursor * { cursor: none !important; }
+
+    html.has-cursor .contact-form input,
+    html.has-cursor .contact-form textarea { cursor: text !important; }
+
+    html.cursor-visible .cursor-dot,
+    html.cursor-visible .cursor-ring { opacity: 1; }
+
+    html.cursor-over-field .cursor-dot,
+    html.cursor-over-field .cursor-ring { opacity: 0; }
+
+    html.cursor-link .cursor-dot { scale: 0; }
+    html.cursor-link .cursor-ring-shape { width: 56px; height: 56px; }
+
+    html.cursor-view .cursor-ring-shape {
+      width: 72px;
+      height: 26px;
+      transform: translate(14px, -50%);
+      background-color: var(--ink);
+    }
+    html.cursor-view .cursor-label { opacity: 1; }
+
+    html.cursor-down .cursor-ring-shape { scale: 0.8; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cursor-dot { transition: opacity 0.25s ease; }
+      .cursor-ring-shape,
+      .cursor-label { transition: none; }
+    }
   </style>
 </head>
 <body>
@@ -805,6 +890,70 @@
   </footer>
 
 </div>
+
+<script>
+  // Custom cursor — only on devices with a fine pointer that can hover
+  (function () {
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    const root = document.documentElement;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const dot = document.createElement('div');
+    dot.className = 'cursor-dot';
+    dot.setAttribute('aria-hidden', 'true');
+    const ring = document.createElement('div');
+    ring.className = 'cursor-ring';
+    ring.setAttribute('aria-hidden', 'true');
+    ring.innerHTML = '<div class="cursor-ring-shape"><span class="cursor-label">View ↗</span></div>';
+    document.body.append(ring, dot);
+    root.classList.add('has-cursor');
+
+    let mx = 0, my = 0, rx = 0, ry = 0, seen = false;
+
+    function setState(target) {
+      if (!target || !target.closest) return;
+      const field = target.closest('.contact-form input, .contact-form textarea');
+      const row = !field && target.closest('.work-item');
+      const link = !field && !row && target.closest('a, button');
+      root.classList.toggle('cursor-over-field', !!field);
+      root.classList.toggle('cursor-view', !!row);
+      root.classList.toggle('cursor-link', !!link);
+    }
+
+    document.addEventListener('pointermove', e => {
+      if (e.pointerType === 'touch') return;
+      mx = e.clientX;
+      my = e.clientY;
+      if (!seen) { rx = mx; ry = my; seen = true; }
+      dot.style.translate = `${mx}px ${my}px`;
+      root.classList.add('cursor-visible');
+      setState(e.target);
+    });
+
+    // Content moves under a still pointer while scrolling
+    window.addEventListener('scroll', () => {
+      if (seen) setState(document.elementFromPoint(mx, my));
+    }, { passive: true });
+
+    document.addEventListener('mouseout', e => {
+      if (!e.relatedTarget) root.classList.remove('cursor-visible', 'cursor-down');
+    });
+
+    document.addEventListener('mousedown', () => {
+      if (!reduceMotion.matches) root.classList.add('cursor-down');
+    });
+    document.addEventListener('mouseup', () => root.classList.remove('cursor-down'));
+
+    (function loop() {
+      const ease = reduceMotion.matches ? 1 : 0.15;
+      rx += (mx - rx) * ease;
+      ry += (my - ry) * ease;
+      ring.style.translate = `${rx}px ${ry}px`;
+      requestAnimationFrame(loop);
+    })();
+  })();
+</script>
 
 </body>
 </html>
