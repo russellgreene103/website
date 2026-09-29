@@ -871,29 +871,23 @@ html.term-locked body {
 
 .form-error[hidden] { display: none; }
 
-/* MAIL.EXE: a terminal window that prints the send, line by line */
+/* MAIL.EXE: the compose window's body turns into a terminal that prints the send, line by line.
+   contact.js sizes it to the form it replaces, and the window's title bar names it. */
 .contact-form[hidden] { display: none; }
 
 .mail-panel {
+  display: flex;
+  flex-direction: column;
   padding: 4px;
   background: var(--pixel);
   color: var(--on-pixel);
-  box-shadow: 8px 8px 0 var(--ink);
   font-family: 'VT323', var(--mono);
   font-size: 20px;
   line-height: 1.15;
 }
 
 .mail-panel[hidden] { display: none; }
-.mail-frame { border: 4px double var(--on-pixel); }
-
-.mail-title {
-  display: flex;
-  gap: 10px;
-  padding: 0 8px;
-  background: var(--paper);
-  color: var(--pixel-text);
-}
+.mail-frame { flex: 1; border: 4px double var(--on-pixel); }
 
 .mail-screen {
   min-height: 12.5em;
@@ -965,7 +959,7 @@ html.term-locked body {
 }
 
 @media (max-width: 660px) {
-  .mail-panel { font-size: 17px; box-shadow: 6px 6px 0 var(--ink); }
+  .mail-panel { font-size: 17px; }
   .mail-screen { padding: 8px 10px 14px; }
   .form-error { font-size: 11px; }
 }

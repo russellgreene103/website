@@ -352,57 +352,39 @@
       max-width: 420px;
     }
 
-    .contact-details {
-      list-style: none;
-      margin-bottom: 40px;
+    /* ── Contact Form: a DOS compose window (the MAIL.EXE send sequence plays in the same window) ── */
+    .compose {
+      background: var(--paper);
+      border: 1px solid var(--ink);
+      box-shadow: 3px 3px 0 var(--ink);
     }
 
-    .contact-details li {
+    .compose-title {
       display: flex;
-      gap: 20px;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--rule);
-      align-items: baseline;
-    }
-
-    .contact-details .detail-label {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.1em;
+      gap: 10px;
+      padding: 7px 12px;
+      background: var(--pixel);
+      color: var(--on-pixel);
+      border-bottom: 1px solid var(--ink);
+      font-family: 'Silkscreen', var(--mono);
+      font-size: 11px;
+      line-height: 1;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--mid);
-      width: 100px;
-      flex-shrink: 0;
+      white-space: nowrap;
     }
 
-    .contact-details .detail-value {
-      font-size: 16px;
-      color: var(--ink);
-    }
-
-    .contact-details a {
-      color: var(--ink);
-      text-decoration: none;
-      border-bottom: 1px solid transparent;
-      transition: border-color 0.2s;
-    }
-
-    .contact-details a:hover { border-bottom-color: var(--ink); }
-
-    /* ── Contact Form ── */
     .contact-form {
       display: flex;
       flex-direction: column;
-      gap: 0;
+      gap: 18px;
+      padding: 22px 22px 24px;
     }
 
     .form-row {
       display: flex;
       flex-direction: column;
-      border-bottom: 1px solid var(--rule);
     }
-
-    .form-row:first-child { border-top: 1px solid var(--rule); }
 
     .form-row label {
       font-family: var(--mono);
@@ -410,33 +392,63 @@
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--mid);
-      padding: 14px 0 0;
+      padding-bottom: 6px;
     }
 
     .form-row input,
     .form-row textarea {
-      background: transparent;
-      border: none;
+      background: var(--paper);
+      border: 1px solid var(--ink);
+      border-radius: 0;
       outline: none;
       font-family: var(--serif);
       font-size: 17px;
       font-weight: 300;
+      line-height: 1.4;
       color: var(--ink);
-      padding: 6px 0 14px;
+      padding: 8px 10px;
       resize: none;
       width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .form-row input:focus,
+    .form-row textarea:focus {
+      border-color: var(--pixel);
+      box-shadow: inset 0 0 0 1px var(--pixel);
     }
 
     .form-row input::placeholder,
     .form-row textarea::placeholder {
       color: var(--mid);
+      opacity: 1;
     }
 
+    .form-row .form-error { padding: 6px 0 0; }
+
     .form-submit {
-      margin-top: 28px;
+      margin-top: 6px;
       display: flex;
-      justify-content: flex-start;
+      justify-content: flex-end;
     }
+
+    .contact-content .contact-alt {
+      margin: 22px 0 0;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      line-height: 1.5;
+      color: var(--mid);
+    }
+
+    .contact-alt a {
+      color: var(--mid);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .contact-alt a:hover { color: var(--ink); }
 
     /* ── Footer ── */
     footer {
@@ -545,6 +557,10 @@
         padding-right: 20px;
       }
 
+      .contact-form { padding: 18px 16px 20px; }
+      .form-row input,
+      .form-submit .dos-button { min-height: 44px; }
+
       footer { flex-direction: column; gap: 8px; text-align: center; }
 
       /* The clock and the title each get their own line, rather than wrapping wherever they fall */
@@ -557,7 +573,6 @@
       .section-label,
       .work-client,
       .work-link,
-      .contact-details .detail-label,
       .form-row label,
       footer .footer-left,
       footer .footer-right { font-size: 11px; }
@@ -568,11 +583,11 @@
       /* Small links get a bigger invisible hit area; the layout doesn't move */
       .nav-links a,
       .work-link,
-      .contact-details a,
+      .contact-alt a,
       footer a { position: relative; -webkit-tap-highlight-color: transparent; }
       .nav-links a::after,
       .work-link::after,
-      .contact-details a::after,
+      .contact-alt a::after,
       footer a::after {
         content: '';
         position: absolute;
@@ -585,10 +600,11 @@
       .work-item:active { background: rgba(14,14,14,0.05); }
       .work-item:hover .work-link { color: var(--mid); border-bottom-color: transparent; }
       .partner-name:hover { opacity: 0.22; }
-      .form-row input { min-height: 44px; }
+      .form-row input,
+      .form-submit .dos-button { min-height: 44px; }
     }
   </style>
-  <link rel="stylesheet" href="/retro.css?v=f378dc7a" />
+  <link rel="stylesheet" href="/retro.css?v=b6f688eb" />
 </head>
 <body>
 
@@ -879,38 +895,27 @@
       <div class="contact-content">
         <h2>Let's make<br /><em>something</em><br />together.</h2>
         <p>For inquiries regarding executive production, strategic partnerships, or technical consultation.</p>
-        <ul class="contact-details">
-          <li>
-            <span class="detail-label">Location</span>
-            <span class="detail-value">New York City</span>
-          </li>
-          <li>
-            <span class="detail-label">Affiliation</span>
-            <span class="detail-value">Executive Producer, BUCK</span>
-          </li>
-          <li>
-            <span class="detail-label">Network</span>
-            <span class="detail-value"><a href="https://www.linkedin.com/in/russellgreene/" target="_blank" rel="noopener">LinkedIn ↗</a></span>
-          </li>
-        </ul>
-
-        <form class="contact-form" id="contact-form" action="https://formspree.io/f/xzdyaezl" method="POST">
-          <div class="form-row">
-            <label for="name">Name</label>
-            <input type="text" id="name" name="name" placeholder="Your name" required />
-          </div>
-          <div class="form-row">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" placeholder="your@email.com" required />
-          </div>
-          <div class="form-row">
-            <label for="message">Message</label>
-            <textarea id="message" name="message" rows="4" placeholder="Tell me about your project…" required></textarea>
-          </div>
-          <div class="form-submit">
-            <button type="submit" class="btn-submit dos-button"><span class="dos-button-icon" data-icon="envelope" aria-hidden="true"></span><span class="dos-button-label">Send message</span><b class="block-cursor dos-button-cursor" aria-hidden="true"></b></button>
-          </div>
-        </form>
+        <div class="compose" id="compose">
+          <div class="compose-title" aria-hidden="true"><span>[■]</span><span class="compose-title-text">New message</span></div>
+          <form class="contact-form" id="contact-form" action="https://formspree.io/f/xzdyaezl" method="POST" aria-label="New message">
+            <div class="form-row">
+              <label for="name">Name</label>
+              <input type="text" id="name" name="name" placeholder="Your name" required />
+            </div>
+            <div class="form-row">
+              <label for="email">Email</label>
+              <input type="email" id="email" name="email" placeholder="your@email.com" required />
+            </div>
+            <div class="form-row">
+              <label for="message">Message</label>
+              <textarea id="message" name="message" rows="4" placeholder="Tell me about your project…" required></textarea>
+            </div>
+            <div class="form-submit">
+              <button type="submit" class="btn-submit dos-button"><span class="dos-button-icon" data-icon="envelope" aria-hidden="true"></span><span class="dos-button-label">Send message</span><b class="block-cursor dos-button-cursor" aria-hidden="true"></b></button>
+            </div>
+          </form>
+        </div>
+        <p class="contact-alt">Or find me on <a href="https://www.linkedin.com/in/russellgreene/" target="_blank" rel="noopener">LinkedIn ↗</a></p>
       </div>
     </div>
   </section>
@@ -924,7 +929,7 @@
 </div>
 
 <script src="/retro.js?v=7ad5fe51"></script>
-<script src="/contact.js?v=2190ddad"></script>
+<script src="/contact.js?v=1ab35bea"></script>
 
 </body>
 </html>

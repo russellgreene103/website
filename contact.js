@@ -138,20 +138,27 @@
       return !first;
     }
 
-    // ── The MAIL.EXE panel ──
+    // ── The MAIL.EXE panel: it takes the form's place inside the compose window, at the form's size,
+    // and the window's title bar switches between NEW MESSAGE and MAIL.EXE ──
     const panel = document.createElement('div');
     panel.className = 'mail-panel';
     panel.hidden = true;
-    panel.innerHTML =
-      '<div class="mail-frame">' +
-        '<div class="mail-title" aria-hidden="true"><span>[■]</span><span>C:\\RUSSELL\\MAIL.EXE</span></div>' +
-        '<div class="mail-screen"></div>' +
-      '</div>';
+    panel.innerHTML = '<div class="mail-frame"><div class="mail-screen"></div></div>';
     const screen = panel.querySelector('.mail-screen');
     const announcer = document.createElement('div');
     announcer.className = 'visually-hidden';
     announcer.setAttribute('aria-live', 'polite');
     form.after(panel, announcer);
+    const title = form.parentElement.querySelector('.compose-title-text');
+    const COMPOSE_TITLE = title ? title.textContent : '';
+
+    function showPanel() {
+      if (!form.hidden && form.offsetHeight) panel.style.minHeight = `${form.offsetHeight}px`;
+      form.hidden = true;
+      panel.hidden = false;
+      screen.textContent = '';
+      if (title) title.textContent = 'C:\\RUSSELL\\MAIL.EXE';
+    }
 
     const announce = text => {
       announcer.textContent = '';
@@ -207,6 +214,7 @@
     function showForm(focusEl) {
       panel.hidden = true;
       screen.textContent = '';
+      if (title) title.textContent = COMPOSE_TITLE;
       form.hidden = false;
       if (focusEl) focusEl.focus();
     }
@@ -214,9 +222,7 @@
     // The request is already out; this only paces what's printed
     async function sequence(id, request) {
       const live = () => id === run;
-      form.hidden = true;
-      panel.hidden = false;
-      screen.textContent = '';
+      showPanel();
       if (fine) root.classList.add('cursor-wait');
       announce('Sending message…');
       let result = null;
@@ -376,9 +382,7 @@
       sequence,
       // The plain result: MESSAGE SENT. or Abort, Retry, Fail?, with no dialing, bar or envelope
       plain(ok) {
-        form.hidden = true;
-        panel.hidden = false;
-        screen.textContent = '';
+        showPanel();
         if (ok) {
           form.reset();
           received('MESSAGE SENT.');
