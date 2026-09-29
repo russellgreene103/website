@@ -763,6 +763,14 @@
           <a href="https://buck.co/work/microsoft-surface" target="_blank" rel="noopener" class="work-link">View ↗</a>
         </li>
 
+        <li class="work-item" data-media="/work-media/microsoft-intel.webp">
+          <div>
+            <span class="work-title">Windows Campaign</span>
+            <span class="work-client">Microsoft + Intel</span>
+          </div>
+          <a href="https://buck.co/work/microsoft-intel-global-b2b-campaign" target="_blank" rel="noopener" class="work-link">View ↗</a>
+        </li>
+
         <li class="work-item" data-media="/work-media/google-pixel-4a.webp">
           <div>
             <span class="work-title">Pixel 4a Campaign</span>
@@ -828,6 +836,20 @@
         </li>
 
       </ul>
+      <script>
+        // A fresh order on every visit: shuffle the rows (Fisher–Yates) as soon as they're parsed, before
+        // the list first paints, so nothing jumps. ?order=fixed keeps the markup order (for testing);
+        // without JS the list stays in markup order too.
+        (function (list) {
+          if (new URLSearchParams(location.search).get('order') === 'fixed') return;
+          var rows = Array.prototype.slice.call(list.children);
+          for (var i = rows.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var t = rows[i]; rows[i] = rows[j]; rows[j] = t;
+          }
+          rows.forEach(function (row) { list.appendChild(row); });
+        })(document.getElementById('work-list'));
+      </script>
     </div>
   </section>
 
@@ -840,6 +862,7 @@
       <span class="partner-name">Spotify</span>
       <span class="partner-name">Cash App</span>
       <span class="partner-name">Microsoft</span>
+      <span class="partner-name">Intel</span>
       <span class="partner-name">J.P. Morgan</span>
       <span class="partner-name">Squarespace</span>
       <span class="partner-name">Pepsi</span>

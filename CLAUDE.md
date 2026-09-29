@@ -15,7 +15,7 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 
 | File | What lives there |
 |---|---|
-| `index.html` | Homepage. Page-specific CSS is inline in `<head>`, as is the pre-paint theme script (always blue; `?theme=blue\|green\|red\|yellow` forces one for testing) |
+| `index.html` | Homepage. Page-specific CSS is inline in `<head>`, as is the pre-paint theme script (always blue; `?theme=blue\|green\|red\|yellow` forces one for testing). An inline script right after the work list shuffles it per visit (`?order=fixed` keeps markup order for testing) |
 | `vibe/index.html` | Password-gated `/vibe` project page. Same theme script, same `retro.js` |
 | `retro.css` | Shared retro/DOS styles: theme tokens, pixel cursor, DOS windows, terminal, work cards, dither canvas |
 | `retro.js` | Shared retro effects for both pages. Each feature sets itself up inside `feature(name, fn)`, so one throwing is logged by name and never stops the others |
@@ -37,7 +37,7 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 - **DOS section labels** type themselves out as commands (`C:\> DIR WORK`); the **partner list** runs a menu selection bar once.
 - **Expertise panel:** resting on, focusing, tapping or clicking (to pin) a skill types its description and related work into a DOS panel. On touch screens and at 660px or narrower (`.xp-inline`), the same panel opens inline under the tapped skill instead.
 - **Name glitch:** every 2–5s, a few letters of the hero `<h1>` pixelate through canvas overlays. The heading text itself is never touched.
-- **Work list:** shows six rows, and a DOS button lists the rest.
+- **Work list:** shuffled on every visit (Fisher–Yates, by the inline script after `#work-list`, before first paint), then shows six rows and a DOS button lists the rest. Everything that counts or numbers projects (SHOW ALL, the card's FILE nn/nn, DIR and OPEN N) reads the DOM, so it follows the order on screen and needs no edits when a project is added. Without JS all rows show in markup order. New case-study images: the page's og:image, 640px wide WebP at about quality 75 (Sanity URLs can do this with `?w=640&fm=webp&q=75`).
 - **Contact form** (`contact.js`): the submit handler is attached first and calls `preventDefault()` before anything else; the request goes out before any UI step, and if the sequence throws the visitor gets a plain MESSAGE SENT. or Abort, Retry, Fail?. JS turns off browser validation for DOS error lines under each field (`.form-error`), then swaps the form for a MAIL.EXE panel that dials, fills a block progress bar and holds at 90% until Formspree answers. Success (only on a confirmed OK) flies a pixel envelope off with a click effect and offers SEND ANOTHER; failure offers Abort, Retry, Fail. The endpoint and request are unchanged. Test it with the request intercepted and mocked; never post to the real form from tests.
 
 ## Design rules
@@ -66,6 +66,7 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 - WebKit drops the `click` when `pointerdown` is `preventDefault()`-ed on a touch. Act on `pointerdown` itself (game buttons), or on `touchend` with `preventDefault()` there (terminal keys, which must not take focus).
 - For touch tests, launch with `--window-size` at least as big as the emulated phone (e.g. `1000,1000`); taps outside the real window hang. A tap on a work row opens a new tab, which stalls later input on the original page.
 - Puppeteer element screenshots fire `matchMedia` change events without the result changing; listeners must compare against the current mode.
+- Pixel comparisons of the homepage must load `/?order=fixed`, or the shuffled work list differs every time.
 - Useful checks: read the `.hero-dither` canvas pixels (opaque vs cleared, uniform 4×4 blocks = the 16px tier), the `html` classes `cursor-wait` and `cursor-link`, and `html[data-theme]`. Emulate touch (`hasTouch`, `isMobile`) and `prefers-reduced-motion` for those paths.
 
 ## Deploy verification
