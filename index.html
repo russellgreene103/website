@@ -459,30 +459,6 @@
       align-items: center;
     }
 
-    footer .footer-left {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--mid);
-    }
-
-    footer .footer-right {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--mid);
-    }
-
-    footer a {
-      color: var(--mid);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    footer a:hover { color: var(--ink); }
-
     /* ── Hero layout with photo ── */
     .hero-inner {
       display: grid;
@@ -561,7 +537,8 @@
       .form-row input,
       .form-submit .dos-button { min-height: 44px; }
 
-      footer { flex-direction: column; gap: 8px; text-align: center; }
+      /* Keys and pizza share one row (they fit at 360px); if they ever can't, both centre */
+      footer { flex-wrap: wrap; justify-content: space-between; gap: 16px; }
 
       /* The clock and the title each get their own line, rather than wrapping wherever they fall */
       .hero-meta > span { display: block; margin-right: 0; }
@@ -573,9 +550,7 @@
       .section-label,
       .work-client,
       .work-link,
-      .form-row label,
-      footer .footer-left,
-      footer .footer-right { font-size: 11px; }
+      .form-row label { font-size: 11px; }
     }
 
     /* ── Touch ── */
@@ -583,12 +558,10 @@
       /* Small links get a bigger invisible hit area; the layout doesn't move */
       .nav-links a,
       .work-link,
-      .contact-alt a,
-      footer a { position: relative; -webkit-tap-highlight-color: transparent; }
+      .contact-alt a { position: relative; -webkit-tap-highlight-color: transparent; }
       .nav-links a::after,
       .work-link::after,
-      .contact-alt a::after,
-      footer a::after {
+      .contact-alt a::after {
         content: '';
         position: absolute;
         inset: -15px -8px;
@@ -604,7 +577,7 @@
       .form-submit .dos-button { min-height: 44px; }
     }
   </style>
-  <link rel="stylesheet" href="/retro.css?v=b6f688eb" />
+  <link rel="stylesheet" href="/retro.css?v=df3bda5b" />
 </head>
 <body>
 
@@ -922,13 +895,17 @@
 
   <!-- Footer -->
   <footer>
-    <span class="footer-left">© 2026 Russell Greene</span>
-    <span class="footer-right"><a href="/vibe">/vibe ↗</a></span>
+    <div class="fkeys">
+      <button type="button" class="fkey" data-fkey="help" hidden><span class="fkey-num">1</span><span class="fkey-label">Help</span></button>
+      <a class="fkey" href="#work"><span class="fkey-num">2</span><span class="fkey-label">Work</span></a>
+      <a class="fkey" href="#contact"><span class="fkey-num">3</span><span class="fkey-label">Mail</span></a>
+    </div>
+    <a class="footer-vibe" href="/vibe" aria-label="/vibe: private projects"><span class="footer-vibe-label" aria-hidden="true">C:\VIBE</span><span class="footer-pizza" data-icon="pizza" aria-hidden="true">/vibe ↗</span></a>
   </footer>
 
 </div>
 
-<script src="/retro.js?v=7ad5fe51"></script>
+<script src="/retro.js?v=c5af454f"></script>
 <script src="/contact.js?v=1ab35bea"></script>
 
 </body>

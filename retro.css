@@ -535,6 +535,10 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 .g-I { fill: var(--ink); }
 .g-P { fill: var(--pixel); }
 .g-C { fill: currentColor; }
+/* Food stays food in every theme */
+.g-K { fill: #c98a3e; }
+.g-Y { fill: #f2c14e; }
+.g-R { fill: #c52e13; }
 
 /* Two-frame icons: frames stack; the second hides until its item is active */
 .expertise-icon svg,
@@ -966,4 +970,104 @@ html.term-locked body {
 
 @media (prefers-reduced-motion: reduce) {
   .mail-bar.is-holding::after { animation: none; }
+}
+
+/* ── Footer: a DOS function key bar (Norton Commander's bottom row) and, on the homepage, the /vibe pizza ── */
+.fkeys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.fkey {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fkey[hidden] { display: none; }
+.fkey-num { padding-right: 3px; }
+
+/* The label is an inverted block; hover and focus flip it back to paper, with a hard cut */
+.fkey-label {
+  padding: 3px 5px 3px 6px;
+  color: var(--on-pixel);
+  background: var(--pixel);
+  border: 1px solid var(--pixel);
+}
+
+.fkey:hover .fkey-label,
+.fkey:focus-visible .fkey-label {
+  color: var(--ink);
+  background: var(--paper);
+  border-color: var(--ink);
+}
+
+.fkey:focus { outline: none; }
+
+.footer-vibe {
+  position: relative;
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--mid);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.footer-pizza { display: grid; }
+
+/* C:\VIBE shows to the slice's left on hover or focus, out of the layout */
+.footer-vibe-label {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 10px);
+  translate: 0 -50%;
+  white-space: nowrap;
+  visibility: hidden;
+}
+
+.footer-vibe:hover .footer-vibe-label,
+.footer-vibe:focus-visible .footer-vibe-label { visibility: visible; }
+
+.footer-vibe:hover .footer-pizza,
+.footer-vibe:focus-visible .footer-pizza { animation: pixel-bob 0.5s steps(1, end) infinite; }
+
+.footer-vibe:focus { outline: none; }
+.footer-vibe:focus-visible { outline: 2px solid var(--pixel-text); outline-offset: 4px; }
+
+/* Touch: 44px tap areas that don't move the layout, and no hover label */
+@media (hover: none) and (pointer: coarse) {
+  .fkey::after,
+  .footer-vibe::after {
+    content: '';
+    position: absolute;
+    inset: -13px -7px;
+  }
+  .footer-vibe::after { inset: -11px; }
+  .footer-vibe-label { display: none; }
+  .footer-vibe:hover .footer-pizza { animation: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-vibe:hover .footer-pizza,
+  .footer-vibe:focus-visible .footer-pizza { animation: none; }
 }

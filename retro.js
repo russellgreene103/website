@@ -40,7 +40,8 @@ function projectName(row) {
 }
 
 // Letter-grid pixel art: each letter becomes one path with class g-<letter>
-// (g-I ink, g-P pixel blue, g-C currentColor); '.' is empty
+// (g-I ink, g-P pixel blue, g-C currentColor; food colours that stay put across themes: g-K crust,
+// g-Y cheese, g-R pepperoni); '.' is empty
 function gridSvg(rows, cell = 2) {
   const paths = {};
   rows.forEach((row, y) => [...row].forEach((c, x) => {
@@ -79,6 +80,20 @@ const PIXEL_ICONS = feature('Pixel icon art', () => {
   const ENVELOPE_BODY = ['CCCCCCCCCC', 'CC......CC', 'C.C....C.C', 'C..C..C..C', 'C...CC...C', 'C........C', 'CCCCCCCCCC'];
   const ENVELOPE_OPEN = ['....CC....', '..CC..CC..', 'CC......CC', 'C........C', 'C..C..C..C', 'C...CC...C', 'C........C', 'C........C', 'CCCCCCCCCC'];
   const ARROW_DOWN = ['..C..', '..C..', '..C..', 'CCCCC', '.CCC.', '..C..'];
+  // The /vibe pizza slice, drawn with C for crust; C is already currentColor, so crust becomes K
+  const PIZZA = [
+    'CCCCCCCCCCC',
+    'CCCCCCCCCCC',
+    'IYYYYYYYYYI',
+    '.IYRRYYYYI.',
+    '.IYRRYYRYI.',
+    '..IYYYRRI..',
+    '..IYYYYYI..',
+    '...IYRYI...',
+    '...IYYYI...',
+    '....IYI....',
+    '.....I.....',
+  ].map(row => row.replace(/C/g, 'K'));
   const ENTER = ['........C.', '........C.', '..C.....C.', '.CC.....C.', 'CCCCCCCCC.', '.CC.......', '..C.......'];
   return {
     people: [stamp(11, 10, [[person('I'), 0, 3], [person('P'), 4, 2], [person('I'), 8, 3]]),
@@ -91,6 +106,7 @@ const PIXEL_ICONS = feature('Pixel icon art', () => {
     enter: [stamp(11, 7, [[ENTER, 1, 0]]), stamp(11, 7, [[ENTER, 0, 0]])],
     arrowDown: [stamp(5, 7, [[ARROW_DOWN, 0, 0]]), stamp(5, 7, [[ARROW_DOWN, 0, 1]])],
     arrowUp: [stamp(5, 7, [[[...ARROW_DOWN].reverse(), 0, 1]]), stamp(5, 7, [[[...ARROW_DOWN].reverse(), 0, 0]])],
+    pizza: [PIZZA],
   };
 }) || {};
 
@@ -1700,6 +1716,8 @@ const retroTerminal = feature('Terminal', function () {
 
   return {
     open,
+    // Open and run a line as if it had been typed (the footer's HELP key)
+    run: line => { open(); submit(line); },
     get game() { return game; }, // for testing the running game
   };
 });
@@ -1729,6 +1747,15 @@ feature('Prompt clock', function () {
     e.preventDefault();
     openTerminal();
   });
+});
+
+// Footer function keys: HELP needs the terminal, so it stays hidden until there is one to open.
+// (The real F1 to F3 are left alone; browsers keep some of them.)
+feature('Function keys', function () {
+  const help = document.querySelector('.fkey[data-fkey="help"]');
+  if (!help || !retroTerminal) return;
+  help.addEventListener('click', () => retroTerminal.run('HELP'));
+  help.hidden = false;
 });
 
 // DOS section labels: each label becomes a command line (C:\> DIR WORK) that types itself out the

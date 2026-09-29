@@ -281,26 +281,6 @@
       align-items: center;
     }
 
-    .footer-left {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--mid);
-    }
-
-    .footer-right a {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--mid);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .footer-right a:hover { color: var(--ink); }
-
     /* ── Fade in ── */
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(12px); }
@@ -316,7 +296,8 @@
       .projects-header { grid-template-columns: 1fr; }
       .section-label { padding-top: 40px; }
       .project-item { margin: 0 -20px; padding-left: 20px; padding-right: 20px; }
-      footer { flex-direction: column; gap: 8px; text-align: center; }
+      /* Keys and pizza share one row (they fit at 360px); if they ever can't, both centre */
+      footer { flex-wrap: wrap; justify-content: space-between; gap: 16px; }
 
       /* The gate fills the visible screen, not the one behind the browser's toolbars */
       #gate { min-height: calc(100svh - 120px); padding: 48px 0; }
@@ -328,12 +309,10 @@
       /* Small links get a bigger invisible hit area; the layout doesn't move */
       .nav-logo,
       .nav-back,
-      .project-link,
-      .footer-right a { position: relative; -webkit-tap-highlight-color: transparent; }
+      .project-link { position: relative; -webkit-tap-highlight-color: transparent; }
       .nav-logo::after,
       .nav-back::after,
-      .project-link::after,
-      .footer-right a::after {
+      .project-link::after {
         content: '';
         position: absolute;
         inset: -15px -8px;
@@ -369,13 +348,11 @@
       .content-meta,
       .section-label,
       .project-url,
-      .project-link,
-      .footer-left,
-      .footer-right a { font-size: 11px; }
+      .project-link { font-size: 11px; }
       .badge-local { font-size: 10px; }
     }
   </style>
-  <link rel="stylesheet" href="/retro.css?v=b6f688eb" />
+  <link rel="stylesheet" href="/retro.css?v=df3bda5b" />
 </head>
 <body>
 
@@ -508,8 +485,11 @@
   </div>
 
   <footer>
-    <span class="footer-left">© 2026 Russell Greene</span>
-    <span class="footer-right"><a href="/">/home ↗</a></span>
+    <div class="fkeys">
+      <button type="button" class="fkey" data-fkey="help" hidden><span class="fkey-num">1</span><span class="fkey-label">Help</span></button>
+      <a class="fkey" href="/"><span class="fkey-num">2</span><span class="fkey-label">Home</span></a>
+      <a class="fkey" href="/#contact"><span class="fkey-num">3</span><span class="fkey-label">Mail</span></a>
+    </div>
   </footer>
 
 </div>
@@ -546,7 +526,7 @@
   input.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
 </script>
 
-<script src="/retro.js?v=7ad5fe51"></script>
+<script src="/retro.js?v=c5af454f"></script>
 
 </body>
 </html>
