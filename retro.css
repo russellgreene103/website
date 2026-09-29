@@ -238,6 +238,7 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
   border-bottom: 1px solid var(--ink);
   font-family: var(--mono);
   font-size: 11px;
+  font-weight: 400; /* the same cut as the footer's function keys, so the two bars match */
   line-height: 1;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1080,6 +1081,11 @@ html.term-locked body {
 }
 
 .fkey[hidden] { display: none; }
+
+/* Phones: the same tightened tracking as the menu bar, so the two bars match */
+@media (max-width: 660px) {
+  .fkey { letter-spacing: 0.04em; }
+}
 .fkey-num { padding-right: 3px; }
 
 /* The label is an inverted block; hover and focus flip it back to paper, with a hard cut */
