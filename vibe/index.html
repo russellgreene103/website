@@ -53,36 +53,6 @@
       padding: 0 32px;
     }
 
-    /* ── Nav ── */
-    nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      padding: 40px 0 38px;
-      border-bottom: 1px solid var(--rule);
-    }
-
-    .nav-logo {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--ink);
-      text-decoration: none;
-    }
-
-    .nav-back {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--mid);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .nav-back:hover { color: var(--ink); }
-
     /* ── Gate (password screen) ── */
     #gate {
       display: flex;
@@ -292,7 +262,6 @@
     /* ── Mobile ── */
     @media (max-width: 660px) {
       .site-wrapper { padding: 0 20px; }
-      nav { padding: 24px 0 22px; }
       .projects-header { grid-template-columns: 1fr; }
       .section-label { padding-top: 40px; }
       .project-item { margin: 0 -20px; padding-left: 20px; padding-right: 20px; }
@@ -307,11 +276,7 @@
     /* ── Touch ── */
     @media (hover: none) and (pointer: coarse) {
       /* Small links get a bigger invisible hit area; the layout doesn't move */
-      .nav-logo,
-      .nav-back,
       .project-link { position: relative; -webkit-tap-highlight-color: transparent; }
-      .nav-logo::after,
-      .nav-back::after,
       .project-link::after {
         content: '';
         position: absolute;
@@ -352,15 +317,20 @@
       .badge-local { font-size: 10px; }
     }
   </style>
-  <link rel="stylesheet" href="/retro.css?v=df3bda5b" />
+  <link rel="stylesheet" href="/retro.css?v=fe2d93a0" />
 </head>
 <body>
 
 <div class="site-wrapper">
 
-  <nav>
-    <a href="/" class="nav-logo">Russell Greene</a>
-    <a href="/" class="nav-back">← Back</a>
+  <!-- Menu bar -->
+  <nav class="menubar" aria-label="Menu">
+    <ul class="menu">
+      <li><a class="menu-item" href="/"><span class="menu-key">H</span>ome</a></li>
+      <li><a class="menu-item" href="/#contact"><span class="menu-key">C</span>ontact</a></li>
+      <li><a class="menu-item" href="https://www.linkedin.com/in/russellgreene/" target="_blank" rel="noopener"><span class="menu-key">L</span>inkedIn ↗</a></li>
+    </ul>
+    <span class="prompt-clock">NYC</span>
   </nav>
 
   <!-- Password Gate -->
@@ -526,7 +496,7 @@
   input.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
 </script>
 
-<script src="/retro.js?v=c5af454f"></script>
+<script src="/retro.js?v=7ccf2f58"></script>
 
 </body>
 </html>

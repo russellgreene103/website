@@ -57,42 +57,6 @@
       padding: 0 32px;
     }
 
-    /* ── Nav ── */
-    nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      padding: 40px 0 38px;
-      border-bottom: 1px solid var(--rule);
-    }
-
-    .nav-logo {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--ink);
-      text-decoration: none;
-    }
-
-    .nav-links {
-      display: flex;
-      gap: 32px;
-      list-style: none;
-    }
-
-    .nav-links a {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--mid);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .nav-links a:hover { color: var(--ink); }
-
     /* ── Hero ── */
     .hero {
       padding: 88px 0 80px;
@@ -493,9 +457,6 @@
     @media (max-width: 660px) {
       .site-wrapper { padding: 0 20px; }
 
-      nav { padding: 24px 0 22px; }
-      .nav-links { gap: 20px; }
-
       .hero { padding: 56px 0 52px; }
 
       .hero-inner {
@@ -539,10 +500,6 @@
 
       /* Keys and pizza share one row (they fit at 360px); if they ever can't, both centre */
       footer { flex-wrap: wrap; justify-content: space-between; gap: 16px; }
-
-      /* The clock and the title each get their own line, rather than wrapping wherever they fall */
-      .hero-meta > span { display: block; margin-right: 0; }
-      .hero-meta > span + span { margin-top: 6px; }
     }
 
     /* Small screens and touch screens: small mono labels one size up, so they read without zooming */
@@ -556,10 +513,8 @@
     /* ── Touch ── */
     @media (hover: none) and (pointer: coarse) {
       /* Small links get a bigger invisible hit area; the layout doesn't move */
-      .nav-links a,
       .work-link,
       .contact-alt a { position: relative; -webkit-tap-highlight-color: transparent; }
-      .nav-links a::after,
       .work-link::after,
       .contact-alt a::after {
         content: '';
@@ -577,19 +532,20 @@
       .form-submit .dos-button { min-height: 44px; }
     }
   </style>
-  <link rel="stylesheet" href="/retro.css?v=df3bda5b" />
+  <link rel="stylesheet" href="/retro.css?v=fe2d93a0" />
 </head>
 <body>
 
 <div class="site-wrapper">
 
-  <!-- Nav -->
-  <nav>
-    <ul class="nav-links">
-      <li><a href="#work">Work</a></li>
-      <li><a href="#contact">Contact</a></li>
-      <li><a href="https://www.linkedin.com/in/russellgreene/" target="_blank" rel="noopener">LinkedIn ↗</a></li>
+  <!-- Menu bar -->
+  <nav class="menubar" aria-label="Menu">
+    <ul class="menu">
+      <li><a class="menu-item" href="#work"><span class="menu-key">W</span>ork</a></li>
+      <li><a class="menu-item" href="#contact"><span class="menu-key">C</span>ontact</a></li>
+      <li><a class="menu-item" href="https://www.linkedin.com/in/russellgreene/" target="_blank" rel="noopener"><span class="menu-key">L</span>inkedIn ↗</a></li>
     </ul>
+    <span class="prompt-clock">NYC</span>
   </nav>
 
   <!-- Hero -->
@@ -597,7 +553,6 @@
     <div class="hero-inner">
       <div class="hero-text">
         <p class="hero-meta">
-          <span class="prompt-clock">NYC</span>
           <span><span class="visually-hidden">Executive Producer at BUCK</span><span aria-hidden="true">Executive Producer @ <span class="dos-field">BUCK<b class="block-cursor dos-field-cursor"></b></span></span></span>
         </p>
         <h1>Russell<br /><em>Greene</em></h1>
@@ -905,7 +860,7 @@
 
 </div>
 
-<script src="/retro.js?v=c5af454f"></script>
+<script src="/retro.js?v=7ccf2f58"></script>
 <script src="/contact.js?v=1ab35bea"></script>
 
 </body>

@@ -228,7 +228,86 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
   pointer-events: none;
 }
 
-/* Prompt clock in the hero meta line */
+/* ── Menu bar: a DOS program's top row (the footer's function keys are its bottom row) ── */
+.menubar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 34px 0 6px;
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  position: relative;
+  z-index: 1; /* its tap areas reach below the rule, over content that animates in with a transform */
+}
+
+.menu {
+  display: flex;
+  list-style: none;
+}
+
+.menu-item {
+  position: relative;
+  display: block;
+  padding: 3px 8px;
+  color: var(--ink);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The first letter is marked like a DOS menu shortcut (visual only: no keys are bound) */
+.menu-key { color: var(--pixel-text); }
+
+/* Selected: a hard-cut --pixel block, the marked letter underlined */
+.menu-item:hover,
+.menu-item:focus-visible {
+  color: var(--on-pixel);
+  background: var(--pixel);
+  outline: none;
+}
+
+.menu-item:hover .menu-key,
+.menu-item:focus-visible .menu-key {
+  color: var(--on-pixel);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.menu-item:focus { outline: none; }
+
+.menubar .prompt-clock { color: var(--mid); }
+
+/* Phones: tighter items so the bar stays one row at 360px; below that the clock shows just the time */
+@media (max-width: 660px) {
+  .menubar { gap: 6px; padding-top: 24px; letter-spacing: 0.04em; }
+  .menu { gap: 6px; }
+  .menu-item { padding: 3px 5px; }
+}
+
+@media (max-width: 359px) {
+  .prompt-prefix { display: none; }
+}
+
+/* Touch: 44px tap areas that don't move the layout */
+@media (hover: none) and (pointer: coarse) {
+  .menu-item::after {
+    content: '';
+    position: absolute;
+    inset: -14px -3px;
+  }
+  /* The bar sets line-height 1, so the clock reaches further up and down to make 44px, and only as far
+     sideways as the gap, so it never takes taps meant for LinkedIn */
+  .menubar .prompt-clock::after { inset: -17px -3px; }
+  .menu-item:hover:not(:focus-visible) { color: var(--ink); background: none; }
+  .menu-item:hover:not(:focus-visible) .menu-key { color: var(--pixel-text); text-decoration: none; }
+}
+
+/* Prompt clock at the right of the menu bar */
 .prompt-clock { cursor: pointer; }
 .prompt-clock:focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }
 

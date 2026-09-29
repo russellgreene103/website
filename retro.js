@@ -1722,12 +1722,13 @@ const retroTerminal = feature('Terminal', function () {
   };
 });
 
-// Prompt-style clock in the hero meta line: C:\NYC> 9:27 AM, opens the terminal
+// Prompt-style clock at the right of the menu bar: C:\NYC> 9:27 AM, opens the terminal
 feature('Prompt clock', function () {
   const clock = document.querySelector('.prompt-clock');
   if (!clock) return;
   const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
-  clock.innerHTML = 'C:\\NYC&gt; <time></time><b class="block-cursor" aria-hidden="true"></b>';
+  // The prefix is its own span so the narrowest screens can show just the time
+  clock.innerHTML = '<span class="prompt-prefix">C:\\NYC&gt; </span><time></time><b class="block-cursor" aria-hidden="true"></b>';
   clock.setAttribute('role', 'button');
   clock.tabIndex = 0;
   const time = clock.querySelector('time');
