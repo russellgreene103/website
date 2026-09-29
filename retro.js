@@ -1,5 +1,17 @@
 // Retro effects shared by the homepage and /vibe. Each feature sets itself up only if its elements exist.
 
+// Every feature sets itself up inside feature(): if one throws, the error is logged with its name and
+// the rest of the page carries on. (The contact form lives in contact.js, so not even a broken or
+// stale copy of this file can stop it.)
+function feature(name, setup) {
+  try {
+    return setup();
+  } catch (err) {
+    console.error(`[retro] ${name} failed to set up:`, err);
+    return undefined;
+  }
+}
+
 const textOf = (el, sel) => el.querySelector(sel).textContent.trim();
 
 const LINKEDIN_URL = 'https://www.linkedin.com/in/russellgreene/';
@@ -51,7 +63,7 @@ function stamp(w, h, sprites) {
 }
 
 // Two-frame pixel icons, drawn into any element with a matching data-icon
-const PIXEL_ICONS = (() => {
+const PIXEL_ICONS = feature('Pixel icon art', () => {
   const person = head => [`.${head}.`, '...', 'III', 'III', 'III', 'I.I'];
   const PLUG = ['.III..', '.IIIPP', 'IIII..', 'IIII..', '.IIIPP', '.III..'];
   const SOCKET = ['III', '.II', 'III', 'III', '.II', 'III'];
@@ -80,11 +92,13 @@ const PIXEL_ICONS = (() => {
     arrowDown: [stamp(5, 7, [[ARROW_DOWN, 0, 0]]), stamp(5, 7, [[ARROW_DOWN, 0, 1]])],
     arrowUp: [stamp(5, 7, [[[...ARROW_DOWN].reverse(), 0, 1]]), stamp(5, 7, [[[...ARROW_DOWN].reverse(), 0, 0]])],
   };
-})();
+}) || {};
 
-document.querySelectorAll('[data-icon]').forEach(slot => {
-  const frames = PIXEL_ICONS[slot.dataset.icon];
-  if (frames) slot.innerHTML = frames.map(f => gridSvg(f)).join('');
+feature('Pixel icons', () => {
+  document.querySelectorAll('[data-icon]').forEach(slot => {
+    const frames = PIXEL_ICONS[slot.dataset.icon];
+    if (frames) slot.innerHTML = frames.map(f => gridSvg(f)).join('');
+  });
 });
 
 // One mosaic tier: the image cover-cropped into the canvas at one sample per block, blown back up
@@ -284,7 +298,7 @@ function makeClickEffects() {
 }
 
 // Pixel cursor — only on devices with a fine pointer that can hover
-(function () {
+feature('Pixel cursor', function () {
   if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
 
   const root = document.documentElement;
@@ -721,10 +735,10 @@ function makeClickEffects() {
     if (e.target.closest && e.target.closest('input, textarea, select')) return;
     clickFx(e.clientX, e.clientY);
   });
-})();
+});
 
 // Touch: taps get the click effects, and tapping anywhere on a list row opens its link
-(function () {
+feature('Touch taps', function () {
   if (!TOUCH) return;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -753,12 +767,12 @@ function makeClickEffects() {
     const link = row.querySelector('.work-link, .project-link');
     if (link) link.click();
   });
-})();
+});
 
 // Touch work thumbnails: each row gets a small square of its case study image. It loads as the row
 // nears the screen, and the first time the row comes into view it resolves through the same mosaic
 // tiers as the desktop preview card (16px, 8px, 4px, then the real image).
-(function () {
+feature('Work thumbnails', function () {
   const list = document.getElementById('work-list');
   const rows = list ? [...list.querySelectorAll('.work-item[data-media]')] : [];
   if (!TOUCH || !rows.length || !('IntersectionObserver' in window)) return;
@@ -821,13 +835,13 @@ function makeClickEffects() {
     }
   }, { threshold: 0.6 });
   rows.forEach(row => { near.observe(row); seen.observe(row); });
-})();
+});
 
 // Retro headshot — the photo is DOS-dithered onto a canvas above it. On hover the whole image
 // resolves through a colour mosaic tier by tier, then the canvas clears to show the real photo.
 // Clicking (or tapping, or Enter/Space) cycles the site's accent colour through the mosaic.
 // Each theme has its own photo; on the recoloured ones a cutout mask marks the backdrop.
-(function () {
+feature('Headshot', function () {
   const wrap = document.querySelector('.hero-photo-wrap');
   const img = wrap && wrap.querySelector('.hero-photo');
   if (!wrap || !img) return;
@@ -907,9 +921,14 @@ function makeClickEffects() {
     // The mask, sampled with the same crop: where it's dark, the cell is backdrop
     data.backdrop = null;
     if (theme !== 'blue' && mask.naturalWidth) {
-      sctx.clearRect(0, 0, cols, rows);
-      sctx.drawImage(mask, (iw - sw) * px, (ih - sh) * py, sw, sh, 0, 0, cols, rows);
-      const m = sctx.getImageData(0, 0, cols, rows).data;
+      // Its own canvas: reading one canvas twice makes Chrome warn (and switch it to a slower path)
+      const msrc = document.createElement('canvas');
+      msrc.width = cols;
+      msrc.height = rows;
+      const mctx = msrc.getContext('2d');
+      mctx.imageSmoothingQuality = 'high';
+      mctx.drawImage(mask, (iw - sw) * px, (ih - sh) * py, sw, sh, 0, 0, cols, rows);
+      const m = mctx.getImageData(0, 0, cols, rows).data;
       data.backdrop = new Uint8Array(cols * rows).map((_, p) => (m[p * 4] < 128 ? 1 : 0));
     }
     return data;
@@ -1192,10 +1211,10 @@ function makeClickEffects() {
       if (!hovering && !cycling) stepStage(0, REVERSE_MS);
     });
   }
-})();
+});
 
 // Hidden DOS terminal — backtick anywhere (outside form fields) or the prompt clock opens it
-const retroTerminal = (function () {
+const retroTerminal = feature('Terminal', function () {
   const root = document.documentElement;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const PROMPT = 'C:\\>';
@@ -1257,13 +1276,24 @@ const retroTerminal = (function () {
       keys.innerHTML = KEYS.map(k => `<button type="button" class="dos-term-key" data-cmd="${k}">${k}</button>`).join('');
       screen.after(keys);
       keys.after(overlay.querySelector('.dos-term-line'));
-      // Pressing a key never takes focus, so an open keyboard stays open (and a closed one stays closed)
-      keys.addEventListener('pointerdown', e => { if (e.target.closest('.dos-term-key')) e.preventDefault(); });
-      keys.addEventListener('mousedown', e => e.preventDefault());
-      keys.addEventListener('click', e => {
-        const key = e.target.closest('.dos-term-key');
-        if (key && !launching && !game) submit(key.dataset.cmd);
+      // Pressing a key never takes focus, so an open keyboard stays open (and a closed one stays closed).
+      // A tap acts on touchend and cancels the rest of the tap there: WebKit drops the click if
+      // pointerdown is cancelled instead. Mouse and keyboard presses come through click.
+      const runKey = key => { if (key && !launching && !game) submit(key.dataset.cmd); };
+      let touchKey = null;
+      keys.addEventListener('touchstart', e => {
+        const t = e.changedTouches[0];
+        touchKey = { key: e.target.closest('.dos-term-key'), x: t.clientX, y: t.clientY };
+      }, { passive: true });
+      keys.addEventListener('touchend', e => {
+        const t = e.changedTouches[0], start = touchKey;
+        touchKey = null;
+        if (!start || !start.key || Math.hypot(t.clientX - start.x, t.clientY - start.y) > 10) return;
+        e.preventDefault();
+        runKey(start.key);
       });
+      keys.addEventListener('mousedown', e => e.preventDefault());
+      keys.addEventListener('click', e => runKey(e.target.closest('.dos-term-key')));
     }
 
     closeBox.addEventListener('click', close);
@@ -1317,7 +1347,10 @@ const retroTerminal = (function () {
     } else {
       root.classList.remove('term-locked');
       document.body.style.top = '';
-      window.scrollTo({ top: lockedY, behavior: 'instant' });
+      // Jump straight back (older Safari rejects behavior: 'instant'; the page's smooth scrolling is paused instead)
+      root.style.scrollBehavior = 'auto';
+      window.scrollTo(0, lockedY);
+      root.style.scrollBehavior = '';
     }
   }
 
@@ -1478,7 +1511,7 @@ const retroTerminal = (function () {
 
   const loadRocks = () => window.RocksGame ? Promise.resolve() : new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = '/rocks.js';
+    script.src = '/rocks.js?v=a6fce7cb';
     script.onload = resolve;
     script.onerror = reject;
     document.head.append(script);
@@ -1648,7 +1681,7 @@ const retroTerminal = (function () {
   function run(line) {
     const [cmd = '', ...rest] = line.trim().toLowerCase().split(/\s+/);
     if (!cmd) return;
-    const command = Object.hasOwn(COMMANDS, cmd) ? COMMANDS[cmd] : null;
+    const command = Object.prototype.hasOwnProperty.call(COMMANDS, cmd) ? COMMANDS[cmd] : null; // Object.hasOwn needs Safari 15.4
     if (command) command(rest.join(' '));
     else print('Bad command or file name');
   }
@@ -1669,10 +1702,10 @@ const retroTerminal = (function () {
     open,
     get game() { return game; }, // for testing the running game
   };
-})();
+});
 
 // Prompt-style clock in the hero meta line: C:\NYC> 9:27 AM, opens the terminal
-(function () {
+feature('Prompt clock', function () {
   const clock = document.querySelector('.prompt-clock');
   if (!clock) return;
   const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
@@ -1689,17 +1722,18 @@ const retroTerminal = (function () {
   }
   tick();
 
-  clock.addEventListener('click', () => retroTerminal.open());
+  const openTerminal = () => { if (retroTerminal) retroTerminal.open(); };
+  clock.addEventListener('click', openTerminal);
   clock.addEventListener('keydown', e => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     e.preventDefault();
-    retroTerminal.open();
+    openTerminal();
   });
-})();
+});
 
 // DOS section labels: each label becomes a command line (C:\> DIR WORK) that types itself out the
 // first time it scrolls into view. Screen readers (and no-JS visitors) get the plain label text.
-(function () {
+feature('Section labels', function () {
   const labels = [...document.querySelectorAll('.section-label')];
   if (!labels.length) return;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -1769,10 +1803,10 @@ const retroTerminal = (function () {
     }
   }, { threshold: 0.6 });
   byVisual.forEach((p, visual) => io.observe(visual));
-})();
+});
 
 // Partner sequence: a DOS menu selection bar steps through the names once, the first time they're seen
-(function () {
+feature('Partner sequence', function () {
   const section = document.querySelector('.partners');
   const names = section ? [...section.querySelectorAll('.partner-name')] : [];
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -1792,12 +1826,12 @@ const retroTerminal = (function () {
     }, STEP_MS);
   }, { threshold: 0.5 });
   io.observe(section);
-})();
+});
 
 // Core expertise readout: resting on a skill (or tapping, clicking to pin, or focusing it) shows
 // its related work and types its description into a DOS-style panel under the grid. On touch
 // screens and narrow windows the same panel opens inline, right under the tapped skill, instead.
-(function () {
+feature('Expertise readout', function () {
   const section = document.querySelector('.expertise');
   const items = section ? [...section.querySelectorAll('.expertise-item')] : [];
   const details = section && section.querySelector('.expertise-details');
@@ -2019,10 +2053,10 @@ const retroTerminal = (function () {
       pin(pinned === item ? null : item);
     });
   });
-})();
+});
 
 // DOS buttons: a keyboard press gets the same pushed-in look as a mouse press
-(function () {
+feature('DOS buttons', function () {
   const PRESS_MS = 120;
   document.addEventListener('keydown', e => {
     const button = e.target.closest && e.target.closest('.dos-button');
@@ -2030,12 +2064,12 @@ const retroTerminal = (function () {
     button.classList.add('is-pressed');
     setTimeout(() => button.classList.remove('is-pressed'), PRESS_MS);
   });
-})();
+});
 
 // Name glitch: every 2–5 seconds two or three letters (sometimes one) of the hero heading briefly
 // pixelate (6px blocks, then 4px, then 3px, then the real letter). Each glitch is a canvas laid over
 // the letter, measured with a Range, so the heading's text, layout and reading order are never touched.
-(function () {
+feature('Name glitch', function () {
   const heading = document.querySelector('.hero h1');
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   if (!heading || reduceMotion.matches || !('IntersectionObserver' in window)) return;
@@ -2139,11 +2173,11 @@ const retroTerminal = (function () {
   }
 
   document.fonts.ready.then(schedule);
-})();
+});
 
 // Work list: the first six rows, then a DOS button that lists the rest in, one row at a time.
 // Without JS every row shows and there's no button.
-(function () {
+feature('Work list', function () {
   const list = document.getElementById('work-list');
   const rows = list ? [...list.querySelectorAll('.work-item')] : [];
   const SHOWN = 6, ROW_MS = 40;
@@ -2194,286 +2228,4 @@ const retroTerminal = (function () {
     reveal();
     timer = setInterval(reveal, ROW_MS);
   });
-})();
-
-// Contact form: DOS-style validation, then a MAIL.EXE panel that dials, transmits and reports back.
-// The form service and request are unchanged; success is only printed once the service confirms.
-// Without JS the form posts normally, with the browser's own validation.
-(function () {
-  const form = document.getElementById('contact-form');
-  if (!form) return;
-  const root = document.documentElement;
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  const PROMPT = 'C:\\>';
-  const MIN_DIAL_MS = 600;           // dialling dots, before the bar starts
-  const BAR_STEP_MS = 50, HOLD = 0.9; // the bar climbs 5% a step and waits at 90% for the service
-  const BAR_CELLS = 16;
-  const DOTS = 10, DOT_MS = MIN_DIAL_MS / DOTS;
-  const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  const fields = [
-    { input: form.elements.name, check: v => (v.trim() ? '' : 'ERROR: NAME REQUIRED') },
-    { input: form.elements.email, check: v => (!v.trim() ? 'ERROR: EMAIL REQUIRED' : EMAIL.test(v.trim()) ? '' : 'ERROR: EMAIL ADDRESS INVALID') },
-    { input: form.elements.message, check: v => (v.trim() ? '' : 'ERROR: MESSAGE REQUIRED') },
-  ];
-  form.noValidate = true;
-
-  // ── Validation: one DOS error line under each field, cleared as soon as the field is fixed ──
-  function setError(field, text) {
-    let el = field.error;
-    if (text && !el) {
-      el = field.error = document.createElement('div');
-      el.className = 'form-error';
-      el.id = `${field.input.id}-error`;
-      field.input.after(el);
-    }
-    if (!el) return;
-    el.textContent = text;
-    el.hidden = !text;
-    if (text) {
-      field.input.setAttribute('aria-invalid', 'true');
-      field.input.setAttribute('aria-describedby', el.id);
-    } else {
-      field.input.removeAttribute('aria-invalid');
-      field.input.removeAttribute('aria-describedby');
-    }
-  }
-
-  fields.forEach(field => field.input.addEventListener('input', () => {
-    if (field.error && !field.error.hidden) setError(field, field.check(field.input.value));
-  }));
-
-  function validate() {
-    let first = null;
-    for (const field of fields) {
-      const text = field.check(field.input.value);
-      setError(field, text);
-      if (text && !first) first = field.input;
-    }
-    if (first) first.focus();
-    return !first;
-  }
-
-  // ── The MAIL.EXE panel ──
-  const panel = document.createElement('div');
-  panel.className = 'mail-panel';
-  panel.hidden = true;
-  panel.innerHTML =
-    '<div class="mail-frame">' +
-      '<div class="mail-title" aria-hidden="true"><span>[■]</span><span>C:\\RUSSELL\\MAIL.EXE</span></div>' +
-      '<div class="mail-screen"></div>' +
-    '</div>';
-  const screen = panel.querySelector('.mail-screen');
-  const announcer = document.createElement('div');
-  announcer.className = 'visually-hidden';
-  announcer.setAttribute('aria-live', 'polite');
-  form.after(panel, announcer);
-
-  const announce = text => {
-    announcer.textContent = '';
-    setTimeout(() => { announcer.textContent = text; }, 50);
-  };
-
-  // Printed lines are visual; each stage is announced once instead. Headings are real text.
-  function line(text = '', { tag = 'div', cls = '' } = {}) {
-    const el = document.createElement(tag);
-    el.className = `mail-line ${cls}`.trim();
-    if (tag === 'div') el.setAttribute('aria-hidden', 'true');
-    el.textContent = text;
-    screen.append(el);
-    return el;
-  }
-
-  function button(label, onClick) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'dos-button mail-button';
-    b.innerHTML = '<span class="dos-button-label"></span><b class="block-cursor dos-button-cursor" aria-hidden="true"></b>';
-    b.querySelector('.dos-button-label').textContent = label;
-    b.addEventListener('click', onClick);
-    return b;
-  }
-
-  function actions(...buttons) {
-    const row = document.createElement('div');
-    row.className = 'mail-actions';
-    row.append(...buttons);
-    screen.append(row);
-    return row;
-  }
-
-  // The bar is block characters (█ filled, ░ empty); VT323 has no block glyphs, so each cell is
-  // also drawn as a solid or dithered pixel block over its character
-  function bar(el, p) {
-    const filled = Math.floor(p * BAR_CELLS + 1e-9);
-    el.textContent = 'Transmitting [';
-    const cells = document.createElement('span');
-    cells.className = 'mail-cells';
-    for (let i = 0; i < BAR_CELLS; i++) {
-      const cell = document.createElement('span');
-      cell.className = i < filled ? 'mail-cell is-on' : 'mail-cell';
-      cell.textContent = i < filled ? '█' : '░';
-      cells.append(cell);
-    }
-    el.append(cells, `] ${Math.round(p * 100)}%`);
-  }
-
-  const wait = ms => new Promise(resolve => setTimeout(resolve, reduceMotion.matches ? 0 : ms));
-
-  function showForm(focusEl) {
-    panel.hidden = true;
-    screen.textContent = '';
-    form.hidden = false;
-    if (focusEl) focusEl.focus();
-  }
-
-  let data = null, run = 0;
-
-  form.addEventListener('submit', e => {
-    e.preventDefault();
-    if (!validate()) return;
-    data = new FormData(form);
-    send();
-  });
-
-  async function send() {
-    const id = ++run;
-    const live = () => id === run;
-    form.hidden = true;
-    panel.hidden = false;
-    screen.textContent = '';
-    if (fine) root.classList.add('cursor-wait');
-    announce('Sending message…');
-
-    // The real request goes out at once; the sequence below only paces what's printed
-    const request = fetch(form.action, {
-      method: 'POST',
-      body: data,
-      headers: { 'Accept': 'application/json' },
-    }).then(res => res.ok, () => false);
-    let result = null;
-    request.then(ok => { result = ok; });
-
-    line(`${PROMPT}MAIL RUSSELL /SEND`);
-    await wait(150);
-    if (!live()) return;
-    const dial = line('Dialing RUSSELL.NET');
-    if (reduceMotion.matches) dial.textContent += `${'.'.repeat(DOTS)} CONNECTED`;
-    else {
-      for (let i = 0; i < DOTS; i++) {
-        await wait(DOT_MS);
-        if (!live()) return;
-        dial.textContent += '.';
-      }
-      dial.textContent += ' CONNECTED';
-    }
-
-    const progress = line('', { cls: 'mail-bar' });
-    bar(progress, 0);
-    let p = 0;
-    if (reduceMotion.matches) {
-      p = HOLD;
-      bar(progress, p);
-    } else {
-      // Climb to 90%, then hold there until the service answers
-      while (p < HOLD - 1e-9) {
-        await wait(BAR_STEP_MS);
-        if (!live()) return;
-        p = Math.min(HOLD, p + 0.05);
-        bar(progress, p);
-      }
-    }
-    if (result === null) progress.classList.add('is-holding');
-    const ok = await request;
-    if (!live()) return;
-    progress.classList.remove('is-holding');
-
-    if (ok) {
-      // Confirmed: finish the bar, and only then say it went
-      if (reduceMotion.matches) bar(progress, 1);
-      else {
-        while (p < 1 - 1e-9) {
-          await wait(BAR_STEP_MS);
-          if (!live()) return;
-          p = Math.min(1, p + 0.05);
-          bar(progress, p);
-        }
-      }
-      form.reset();
-      const sent = line('MESSAGE SENT.');
-      root.classList.remove('cursor-wait');
-      if (!reduceMotion.matches) await flyEnvelope(sent);
-      if (!live()) return;
-      line();
-      const heading = line('MESSAGE RECEIVED.', { tag: 'h3', cls: 'mail-result' });
-      heading.tabIndex = -1;
-      line('RUSSELL WILL BE IN TOUCH.', { tag: 'p', cls: 'mail-result-sub' });
-      actions(button('Send another', () => showForm(fields[0].input)));
-      announce('Message sent. Russell will be in touch.');
-      heading.focus();
-    } else {
-      root.classList.remove('cursor-wait');
-      line();
-      const heading = line('ERROR: TRANSMISSION FAILED', { tag: 'h3', cls: 'mail-result' });
-      heading.id = 'mail-failed';
-      heading.tabIndex = -1;
-      const ask = line('Abort, Retry, Fail?', { tag: 'p', cls: 'mail-ask' });
-      ask.id = 'mail-ask';
-      const row = actions(
-        button('Abort', () => showForm(form.querySelector('.btn-submit'))),
-        button('Retry', () => send()),
-        button('Fail', () => fail(row)),
-      );
-      row.setAttribute('role', 'group');
-      row.setAttribute('aria-labelledby', 'mail-failed mail-ask');
-      announce('Transmission failed. Abort, Retry, Fail?');
-      row.querySelector('button').focus();
-    }
-  }
-
-  // Fail: the old-fashioned way round
-  function fail(row) {
-    row.remove();
-    line(`${PROMPT}`);
-    const note = line('', { tag: 'p', cls: 'mail-fallback' });
-    note.tabIndex = -1;
-    const link = document.createElement('a');
-    link.href = LINKEDIN_URL;
-    link.target = '_blank';
-    link.rel = 'noopener';
-    link.textContent = 'LinkedIn ↗';
-    note.append('Mail is down. Reach Russell on ', link, ' instead.');
-    actions(button('Back to form', () => showForm(form.querySelector('.btn-submit'))));
-    note.focus();
-  }
-
-  // The envelope lifts off the MESSAGE SENT. line in steps, shrinking as it climbs, and a click
-  // effect bursts where it leaves
-  let clickFx = null;
-  function flyEnvelope(from) {
-    return new Promise(resolve => {
-      const env = document.createElement('div');
-      env.className = 'mail-envelope';
-      env.setAttribute('aria-hidden', 'true');
-      env.innerHTML = gridSvg(PIXEL_ICONS.envelope[0].slice(2), 6);
-      document.body.append(env);
-      const r = from.getBoundingClientRect();
-      const x = Math.round(r.left + Math.min(r.width, 240) / 2 - 30), y = Math.round(r.bottom - 42);
-      env.style.translate = `${x}px ${y}px`;
-      const RISE = [0, 16, 40, 72, 112, 160];
-      const frames = RISE.map((dy, i) => ({
-        offset: i / RISE.length, easing: 'steps(1, end)',
-        transform: `translate(${i % 2 ? 4 : 0}px, ${-dy}px) scale(${i < 3 ? 1 : i < 5 ? 0.75 : 0.5})`, opacity: 1,
-      }));
-      frames.push({ offset: 1, transform: 'translate(0px, -160px) scale(0.5)', opacity: 0 });
-      const anim = env.animate(frames, { duration: 720, fill: 'forwards' });
-      // Burst as the envelope blinks out at the top of its climb
-      setTimeout(() => {
-        clickFx = clickFx || makeClickEffects();
-        clickFx(x + 30, y + 21 - 160);
-      }, 720 * (RISE.length - 1) / RISE.length);
-      anim.finished.then(() => { env.remove(); setTimeout(resolve, 150); }, resolve);
-    });
-  }
-})();
+});

@@ -601,7 +601,7 @@ window.RocksGame = (function () {
         b.className = 'rocks-button rocks-aux';
         b.textContent = label;
         b.setAttribute('aria-label', name);
-        b.addEventListener('pointerdown', e => e.preventDefault());
+        // No preventDefault on pointerdown here: WebKit would then drop the click
         b.addEventListener('click', e => {
           e.stopPropagation(); // the terminal screen would take the tap as "focus the prompt"
           onTap();
