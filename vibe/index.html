@@ -200,9 +200,6 @@
       border-bottom: 1px solid var(--rule);
       cursor: default;
       transition: background 0.15s;
-      margin: 0 -32px;
-      padding-left: 32px;
-      padding-right: 32px;
     }
 
     .project-item:first-child { border-top: 1px solid var(--rule); margin-top: 64px; }
@@ -244,7 +241,7 @@
 
     /* ── Footer ── */
     footer {
-      border-top: 1px solid var(--rule);
+      border-top: 1px solid var(--ink); /* matches the menu bar's rule: the page is framed top and bottom alike */
       padding: 28px 0;
       display: flex;
       justify-content: space-between;
@@ -264,7 +261,6 @@
       .site-wrapper { padding: 0 20px; }
       .projects-header { grid-template-columns: 1fr; }
       .section-label { padding-top: 40px; }
-      .project-item { margin: 0 -20px; padding-left: 20px; padding-right: 20px; }
       /* Keys and pizza share one row (they fit at 360px); if they ever can't, both centre */
       footer { flex-wrap: wrap; justify-content: space-between; gap: 16px; }
 
