@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Email signature — Russell Greene</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --ink: #0e0e0e; --paper: #f5f3ef; --mid: #6f6f6f; --pixel: #1f3bd6; --mono: 'DM Mono', 'Courier New', monospace; }
+    body { background: var(--paper); color: var(--ink); font-family: var(--mono); font-size: 12px; line-height: 1.7; padding: 48px 24px; }
+    main { max-width: 560px; margin: 0 auto; }
+    h1 { font-size: 12px; font-weight: 400; letter-spacing: 0.1em; margin-bottom: 24px; }
+    h1 span { color: var(--pixel); }
+    .card { background: #ffffff; border: 1px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 28px 28px 24px; margin-bottom: 20px; }
+    .card .hint { font-family: Arial, sans-serif; font-size: 14px; color: #333; margin-bottom: 16px; }
+    button { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); background: var(--paper); border: 1px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 12px 18px; cursor: pointer; }
+    button:hover, button:focus-visible { background: var(--pixel); color: var(--paper); outline: none; }
+    button:active { transform: translate(3px, 3px); box-shadow: none; }
+    .status { margin-left: 14px; color: var(--pixel); }
+    ol { margin: 28px 0 0 18px; color: var(--mid); }
+    li { margin-bottom: 6px; }
+    li b { color: var(--ink); font-weight: 400; }
+    pre { margin-top: 28px; color: var(--mid); white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+<main>
+  <h1><span>C:\&gt;</span> TYPE SIGNATURE.TXT</h1>
+
+  <div class="card">
+    <p class="hint">Talk soon,</p>
+
+    <!-- The signature: email-safe (tables, inline styles, no scripts, absolute image URL) -->
+    <div id="sig">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+  <tr>
+    <td style="font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:22px;color:#0e0e0e;padding:0 0 2px 0;">Russell Greene</td>
+  </tr>
+  <tr>
+    <td style="font-family:'Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:1px;color:#6f6f6f;padding:0 0 8px 0;">EXECUTIVE PRODUCER @ <a href="https://buck.co" style="color:#1f3bd6;text-decoration:none;">BUCK</a></td>
+  </tr>
+  <tr>
+    <td style="padding:0;">
+      <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;">
+        <tr>
+          <td style="font-family:'Courier New',Courier,monospace;font-size:11px;line-height:16px;color:#0e0e0e;padding:0 3px 0 0;">1</td>
+          <td bgcolor="#1f3bd6" style="background-color:#1f3bd6;padding:1px 5px;"><a href="https://russellgreene.com" style="font-family:'Courier New',Courier,monospace;font-size:11px;line-height:14px;letter-spacing:1px;color:#f5f3ef;text-decoration:none;">SITE</a></td>
+          <td style="width:10px;font-size:0;line-height:0;">&nbsp;</td>
+          <td style="font-family:'Courier New',Courier,monospace;font-size:11px;line-height:16px;color:#0e0e0e;padding:0 3px 0 0;">2</td>
+          <td bgcolor="#1f3bd6" style="background-color:#1f3bd6;padding:1px 5px;"><a href="https://www.linkedin.com/in/russellgreene/" style="font-family:'Courier New',Courier,monospace;font-size:11px;line-height:14px;letter-spacing:1px;color:#f5f3ef;text-decoration:none;">LINKEDIN</a></td>
+          <td style="width:10px;font-size:0;line-height:0;">&nbsp;</td>
+          <td style="font-family:'Courier New',Courier,monospace;font-size:11px;line-height:16px;color:#0e0e0e;padding:0 3px 0 0;">3</td>
+          <td bgcolor="#1f3bd6" style="background-color:#1f3bd6;padding:1px 5px;"><a href="https://russellgreene.com/#work" style="font-family:'Courier New',Courier,monospace;font-size:11px;line-height:14px;letter-spacing:1px;color:#f5f3ef;text-decoration:none;">WORK</a></td>
+          <td style="width:10px;font-size:0;line-height:0;">&nbsp;</td>
+          <td valign="middle" style="padding:0;"><img src="https://russellgreene.com/sig/pizza.gif" width="22" height="24" alt="" style="display:block;border:0;outline:none;"></td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+    </div>
+  </div>
+
+  <button type="button" id="copy">Copy signature</button><span class="status" id="status" aria-live="polite"></span>
+
+  <ol>
+    <li><b>Gmail:</b> Settings, See all settings, General, Signature. Create new, paste, save.</li>
+    <li><b>Apple Mail:</b> Settings, Signatures, add one, paste, and untick "Always match my default message font".</li>
+    <li><b>Outlook:</b> Settings, Mail, Compose and reply, Email signature. Paste and save.</li>
+  </ol>
+
+  <pre id="plain">Russell Greene
+Executive Producer @ BUCK
+russellgreene.com</pre>
+</main>
+
+<script>
+  (function () {
+    var btn = document.getElementById('copy');
+    var status = document.getElementById('status');
+    var sig = document.getElementById('sig');
+    var plain = document.getElementById('plain').textContent;
+
+    function done(msg) { status.textContent = msg; setTimeout(function () { status.textContent = ''; }, 3000); }
+
+    // Fallback: select the rendered signature and copy it, formatting included
+    function selectAndCopy() {
+      var range = document.createRange();
+      range.selectNodeContents(sig);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      sel.removeAllRanges();
+      done(ok ? 'COPIED. PASTE IT INTO YOUR MAIL SETTINGS.' : 'SELECT THE SIGNATURE AND COPY IT BY HAND.');
+    }
+
+    btn.addEventListener('click', function () {
+      if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+        var item = new ClipboardItem({
+          'text/html': new Blob([sig.innerHTML], { type: 'text/html' }),
+          'text/plain': new Blob([plain], { type: 'text/plain' })
+        });
+        navigator.clipboard.write([item]).then(function () {
+          done('COPIED. PASTE IT INTO YOUR MAIL SETTINGS.');
+        }, selectAndCopy);
+      } else {
+        selectAndCopy();
+      }
+    });
+  })();
+</script>
+</body>
+</html>
