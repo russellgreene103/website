@@ -1,11 +1,12 @@
 /* Retro effects shared by the homepage and /vibe. Colours and fonts come from each page's :root. */
 
 /* Accent themes, chosen per visit by the inline script in each page's <head> (blue without JS).
-   --pixel fills; --on-pixel is text on those fills; --pixel-text is accent text on --paper. */
-html[data-theme="blue"]   { --pixel: #1f3bd6; --on-pixel: var(--paper); --pixel-text: #1f3bd6; }
-html[data-theme="green"]  { --pixel: #10633b; --on-pixel: var(--paper); --pixel-text: #10633b; }
-html[data-theme="red"]    { --pixel: #c52e13; --on-pixel: var(--paper); --pixel-text: #c52e13; }
-html[data-theme="yellow"] { --pixel: #d7a13f; --on-pixel: var(--ink);   --pixel-text: #8a5d0a; }
+   --pixel fills; --on-pixel is text on those fills; --pixel-text is accent text on --paper;
+   --pixel-hi and --pixel-lo are the accent's bevel highlight and shadow in shaded pixel art. */
+html[data-theme="blue"]   { --pixel: #1f3bd6; --on-pixel: var(--paper); --pixel-text: #1f3bd6; --pixel-hi: #6f86f0; --pixel-lo: #11247f; }
+html[data-theme="green"]  { --pixel: #10633b; --on-pixel: var(--paper); --pixel-text: #10633b; --pixel-hi: #36a167; --pixel-lo: #073a22; }
+html[data-theme="red"]    { --pixel: #c52e13; --on-pixel: var(--paper); --pixel-text: #c52e13; --pixel-hi: #ee7c63; --pixel-lo: #7a1a0a; }
+html[data-theme="yellow"] { --pixel: #d7a13f; --on-pixel: var(--ink);   --pixel-text: #8a5d0a; --pixel-hi: #f3d791; --pixel-lo: #a4710e; }
 
 /* ── Pixel cursor (fine pointers only; elements are added by JS) ── */
 .pixel-cursor {
@@ -615,26 +616,22 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 .g-I { fill: var(--ink); }
 .g-P { fill: var(--pixel); }
 .g-C { fill: currentColor; }
+.g-Q { fill: var(--pixel-hi); }
+.g-S { fill: var(--pixel-lo); }
+/* Shaded greys and white: fixed in every theme */
+.g-E { fill: #262523; }
+.g-D { fill: #3d3c3a; }
+.g-M { fill: #8d8a84; }
+.g-L { fill: #d7d3ca; }
+.g-W { fill: #fbfaf6; }
 /* Food stays food in every theme */
 .g-K { fill: #c98a3e; }
 .g-Y { fill: #f2c14e; }
 .g-R { fill: #c52e13; }
 
 /* Two-frame icons: frames stack; the second hides until its item is active */
-.expertise-icon svg,
 .dos-button-icon svg { grid-area: 1 / 1; }
-.expertise-icon svg + svg,
 .dos-button-icon svg + svg { visibility: hidden; }
-
-.expertise-item:hover .expertise-icon svg,
-.expertise-item.is-selected .expertise-icon svg { animation: icon-frame 0.8s steps(1, end) infinite; }
-.expertise-item:hover .expertise-icon svg + svg,
-.expertise-item.is-selected .expertise-icon svg + svg { animation-delay: -0.4s; }
-
-@keyframes icon-frame {
-  0%        { visibility: visible; }
-  50%, 100% { visibility: hidden; }
-}
 
 /* Core expertise readout panel (JS replaces the plain description list with it) */
 .expertise.xp-ready .expertise-details { display: none; }
@@ -772,8 +769,6 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .expertise-item:hover .expertise-icon svg,
-  .expertise-item.is-selected .expertise-icon svg,
   .dos-button:hover .dos-button-icon svg { animation: none; }
 }
 
@@ -926,7 +921,6 @@ html.term-locked body {
   .dos-button { min-height: 44px; touch-action: manipulation; }
 
   .expertise-item:hover:not(.is-selected) .expertise-name { color: var(--ink); }
-  .expertise-item:hover:not(.is-selected) .expertise-icon svg { animation: none; }
 
   /* Taps on the clock land even a little off it (the hit area grows; the layout doesn't) */
   .prompt-clock {

@@ -33,6 +33,8 @@
       --pixel: #1f3bd6;         /* accent fill (themes override these in retro.css) */
       --on-pixel: var(--paper); /* text and icons on --pixel */
       --pixel-text: #1f3bd6;    /* accent text on --paper */
+      --pixel-hi: #6f86f0;      /* accent highlight and shadow in shaded pixel art */
+      --pixel-lo: #11247f;
       --serif: 'Cormorant Garamond', Georgia, serif;
       --mono: 'DM Mono', 'Courier New', monospace;
     }
@@ -139,14 +141,14 @@
 
     .expertise-list li { border-bottom: 1px solid var(--rule); }
 
-    .expertise-list li:nth-child(odd) { padding-right: 40px; }
+    .expertise-list li:nth-child(odd) { padding-right: 28px; }
 
     .expertise-item {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
       width: 100%;
-      padding: 9px 0;
+      padding: 8px 0;
       background: none;
       border: 0;
       font: inherit;
@@ -160,13 +162,15 @@
     .expertise-item.is-selected .expertise-name { color: var(--pixel-text); }
     .expertise-item:focus-visible { outline: 1px solid var(--pixel-text); outline-offset: 2px; }
 
-    /* Pixel icons are drawn in by JS; the slot keeps its width either way */
+    /* Pixel icons are drawn in by JS (24×24 cells at 2px); the slot keeps its size either way */
     .expertise-icon {
       flex: none;
-      display: inline-grid;
-      width: 22px;
-      height: 20px;
+      display: block;
+      width: 48px;
+      height: 48px;
     }
+    .expertise-icon svg { display: block; }
+    .expertise-name { line-height: 1.3; }
 
     .expertise-details {
       margin-top: 20px;
@@ -523,7 +527,7 @@
       .form-submit .dos-button { min-height: 44px; }
     }
   </style>
-  <link rel="stylesheet" href="/retro.css?v=e5659547" />
+  <link rel="stylesheet" href="/retro.css?v=a4685e62" />
 </head>
 <body>
 
@@ -564,25 +568,25 @@
       <ul class="expertise-list">
         <li>
           <button type="button" class="expertise-item" data-dir="LEADERSHIP" aria-controls="xp-leadership">
-            <span class="expertise-icon" data-icon="people" aria-hidden="true"></span>
+            <span class="expertise-icon" data-xp-icon="people" aria-hidden="true"></span>
             <span class="expertise-name">Cross-functional Leadership</span>
           </button>
         </li>
         <li>
           <button type="button" class="expertise-item" data-dir="INTEGRATION" aria-controls="xp-integration">
-            <span class="expertise-icon" data-icon="plug" aria-hidden="true"></span>
+            <span class="expertise-icon" data-xp-icon="plug" aria-hidden="true"></span>
             <span class="expertise-name">Technical Integration Strategy</span>
           </button>
         </li>
         <li>
           <button type="button" class="expertise-item" data-dir="GLOBAL-OPS" aria-controls="xp-production">
-            <span class="expertise-icon" data-icon="globe" aria-hidden="true"></span>
+            <span class="expertise-icon" data-xp-icon="globe" aria-hidden="true"></span>
             <span class="expertise-name">Global Production Ops</span>
           </button>
         </li>
         <li>
           <button type="button" class="expertise-item" data-dir="ARCHITECTURE" aria-controls="xp-architecture">
-            <span class="expertise-icon" data-icon="blocks" aria-hidden="true"></span>
+            <span class="expertise-icon" data-xp-icon="blocks" aria-hidden="true"></span>
             <span class="expertise-name">Creative Agency Architecture</span>
           </button>
         </li>
@@ -851,7 +855,7 @@
 
 </div>
 
-<script src="/retro.js?v=7ccf2f58"></script>
+<script src="/retro.js?v=d75331ad"></script>
 <script src="/contact.js?v=1ab35bea"></script>
 
 </body>

@@ -39,14 +39,18 @@ function projectName(row) {
     .filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent).join('').trim();
 }
 
-// Letter-grid pixel art: each letter becomes one path with class g-<letter>
-// (g-I ink, g-P pixel blue, g-C currentColor; food colours that stay put across themes: g-K crust,
+// Letter-grid pixel art: each letter becomes one path with class g-<letter>, one rectangle per run
+// (g-I ink, g-P pixel blue, g-C currentColor; g-Q and g-S the accent's highlight and shadow; fixed
+// greys g-E, g-D, g-M, g-L and white g-W; food colours that stay put across themes: g-K crust,
 // g-Y cheese, g-R pepperoni); '.' is empty
 function gridSvg(rows, cell = 2) {
   const paths = {};
-  rows.forEach((row, y) => [...row].forEach((c, x) => {
-    if (c !== '.') paths[c] = (paths[c] || '') + `M${x * cell} ${y * cell}h${cell}v${cell}h-${cell}z`;
-  }));
+  rows.forEach((row, y) => {
+    for (const { 0: run, index: x } of row.matchAll(/([^.])\1*/g)) {
+      const c = run[0], w = run.length * cell;
+      paths[c] = (paths[c] || '') + `M${x * cell} ${y * cell}h${w}v${cell}h-${w}z`;
+    }
+  });
   const w = rows[0].length * cell, h = rows.length * cell;
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges" aria-hidden="true">` +
     Object.entries(paths).map(([c, d]) => `<path class="g-${c}" d="${d}"/>`).join('') + '</svg>';
@@ -65,18 +69,6 @@ function stamp(w, h, sprites) {
 
 // Two-frame pixel icons, drawn into any element with a matching data-icon
 const PIXEL_ICONS = feature('Pixel icon art', () => {
-  const person = head => [`.${head}.`, '...', 'III', 'III', 'III', 'I.I'];
-  const PLUG = ['.III..', '.IIIPP', 'IIII..', 'IIII..', '.IIIPP', '.III..'];
-  const SOCKET = ['III', '.II', 'III', 'III', '.II', 'III'];
-  const BLOCK = ['IIII', 'I..I', 'IIII'], TOP = ['PPPP', 'P..P', 'PPPP'];
-  // A globe whose meridians (and one blue city) shift a column per frame, so it turns
-  const globe = shift => Array.from({ length: 10 }, (_, y) => Array.from({ length: 10 }, (_, x) => {
-    const d = Math.hypot(x - 4.5, y - 4.5);
-    if (d > 4.8) return '.';
-    if (d > 3.8) return 'I';
-    if (x === 5 + shift && y === 6) return 'P';
-    return y === 4 || (x - shift) % 3 === 1 ? 'I' : '.';
-  }).join(''));
   const ENVELOPE_BODY = ['CCCCCCCCCC', 'CC......CC', 'C.C....C.C', 'C..C..C..C', 'C...CC...C', 'C........C', 'CCCCCCCCCC'];
   const ENVELOPE_OPEN = ['....CC....', '..CC..CC..', 'CC......CC', 'C........C', 'C..C..C..C', 'C...CC...C', 'C........C', 'C........C', 'CCCCCCCCCC'];
   const ARROW_DOWN = ['..C..', '..C..', '..C..', 'CCCCC', '.CCC.', '..C..'];
@@ -96,12 +88,6 @@ const PIXEL_ICONS = feature('Pixel icon art', () => {
   ].map(row => row.replace(/C/g, 'K'));
   const ENTER = ['........C.', '........C.', '..C.....C.', '.CC.....C.', 'CCCCCCCCC.', '.CC.......', '..C.......'];
   return {
-    people: [stamp(11, 10, [[person('I'), 0, 3], [person('P'), 4, 2], [person('I'), 8, 3]]),
-             stamp(11, 10, [[person('I'), 0, 2], [person('P'), 4, 3], [person('I'), 8, 2]])],
-    plug: [stamp(10, 10, [[PLUG, 0, 2], [SOCKET, 7, 2]]), stamp(10, 10, [[['II', 'II'], 0, 4], [PLUG, 2, 2], [SOCKET, 7, 2]])],
-    globe: [globe(0), globe(1)],
-    // Rest on the settled stack; the loop lifts the top block and drops it back into place
-    blocks: [stamp(10, 10, [[BLOCK, 1, 7], [BLOCK, 5, 7], [TOP, 3, 4]]), stamp(10, 10, [[BLOCK, 1, 7], [BLOCK, 5, 7], [TOP, 3, 1]])],
     envelope: [stamp(10, 9, [[ENVELOPE_BODY, 0, 2]]), ENVELOPE_OPEN],
     enter: [stamp(11, 7, [[ENTER, 1, 0]]), stamp(11, 7, [[ENTER, 0, 0]])],
     arrowDown: [stamp(5, 7, [[ARROW_DOWN, 0, 0]]), stamp(5, 7, [[ARROW_DOWN, 0, 1]])],
@@ -115,6 +101,124 @@ feature('Pixel icons', () => {
     const frames = PIXEL_ICONS[slot.dataset.icon];
     if (frames) slot.innerHTML = frames.map(f => gridSvg(f)).join('');
   });
+});
+
+// Core expertise icons: 24×24 shaded pixel art, several frames each. Frames are run-length encoded
+// (a count before a letter repeats it) with the letters gridSvg knows: I is the ink outline, P the
+// accent, Q and S its highlight and shadow, E D M L W the fixed greys and white. `rest` is the frame
+// shown when idle; `ms` is the step between frames.
+const XP_ICON_DATA = {
+  people: { ms: 160, rest: 0, frames: [
+    '106.4I19.I4QI17.IQ4PQI16.IQ4PSI10.5I.IQ4PSI.5I4.I3MI2.IQ3SI2.I3MI4.IMDEI3.4I3.IMDEI4.IM2EI10.IM2EI4.5I10.5I60.W2IW14.I3.2IQ2WQ2I3.I6.2IM3I2Q4P2Q3IM2I3.I2MDMIQ8PQIMD2MI2.IM3DIQ8PSI3DEI.IM3EIQ11SI4E25I48.',
+    '106.4I19.I4QI17.IQ4PQI16.IQ4PSI16.IQ4PSI.5I4.5I2.IQ3SI2.I3MI4.I3MI3.4I3.IMDEI4.IMDEI10.IM2EI4.IM2EI10.5I4.5I51.W2IW14.I3.2IQ2WQ2I3.I6.2IM3I2Q4P2Q3IM2I3.I2MDMIQ8PQIMD2MI2.IM3DIQ8PSI3DEI.IM3EIQ11SI4E25I48.',
+    '106.4I19.I4QI17.IQ4PQI16.IQ4PSI10.5I.IQ4PSI10.I3MI2.IQ3SI2.5I4.IMDEI3.4I3.I3MI4.IM2EI10.IMDEI4.5I10.IM2EI19.5I36.W2IW14.I3.2IQ2WQ2I3.I6.2IM3I2Q4P2Q3IM2I3.I2MDMIQ8PQIMD2MI2.IM3DIQ8PSI3DEI.IM3EIQ11SI4E25I48.',
+    '130.4I19.I4QI17.IQ4PQI10.5I.IQ4PSI.5I4.I3MI.IQ4PSI.I3MI4.IMDEI2.IQ3SI2.IMDEI4.IM2EI3.4I3.IM2EI4.5I10.5I60.W2IW14.I3.2IQ2WQ2I3.I6.2IM3I2Q4P2Q3IM2I3.I2MDMIQ8PQIMD2MI2.IM3DIQ8PSI3DEI.IM3EIQ11SI4E25I48.',
+    '39.7I17.2I4QI17.2IQ3SI12.4I.7I11.I4Q2I16.IQ4PQI16.IQ4PSI10.5I.IQ4PSI.5I4.I3MI2.IQ3S2I.I3MI4.IMDEI3.4I.I.IMDEI4.IM2EI8.I.IM2EI4.5I8.I.5I17.I23.I18.W2IW14.I3.2IQ2WQ2I3.I6.2IM3I2Q4P2Q3IM2I3.I2MDMIQ8PQIMD2MI2.IM3DIQ8PSI3DEI.IM3EIQ11SI4E25I48.',
+    '39.3I2.2I17.2IQ2IQI17.2I3QSI12.4I.3I2S2I11.I4Q2I2.2I12.IQ4PQI16.IQ4PSI10.5I.IQ4PSI.5I4.I3MI2.IQ3S2I.I3MI4.IMDEI3.4I.I.IMDEI4.IM2EI8.I.IM2EI4.5I8.I.5I17.I23.I18.W2IW14.I3.2IQ2WQ2I3.I6.2IM3I2Q4P2Q3IM2I3.I2MDMIQ8PQIMD2MI2.IM3DIQ8PSI3DEI.IM3EIQ11SI4E25I48.',
+    '39.7I17.2I4QI17.2IQ3SI12.4I.7I11.I4Q2I16.IQ4PQI16.IQ4PSI10.5I.IQ4PSI.5I4.I3MI2.IQ3S2I.I3MI4.IMDEI3.4I.I.IMDEI4.IM2EI8.I.IM2EI4.5I8.I.5I17.I23.I18.W2IW14.I3.2IQ2WQ2I3.I6.2IM3I2Q4P2Q3IM2I3.I2MDMIQ8PQIMD2MI2.IM3DIQ8PSI3DEI.IM3EIQ11SI4E25I48.',
+    '39.3I2.2I17.2IQ2IQI17.2I3QSI12.4I.3I2S2I11.I4Q2I2.2I12.IQ4PQI16.IQ4PSI10.5I.IQ4PSI.5I4.I3MI2.IQ3S2I.I3MI4.IMDEI3.4I.I.IMDEI4.IM2EI8.I.IM2EI4.5I8.I.5I17.I23.I18.W2IW14.I3.2IQ2WQ2I3.I6.2IM3I2Q4P2Q3IM2I3.I2MDMIQ8PQIMD2MI2.IM3DIQ8PSI3DEI.IM3EIQ11SI4E25I48.',
+    '39.7I17.2I4QI17.2IQ3SI12.4I.7I11.I4Q2I16.IQ4PQI16.IQ4PSI10.5I.IQ4PSI.5I4.I3MI2.IQ3S2I.I3MI4.IMDEI3.4I.I.IMDEI4.IM2EI8.I.IM2EI4.5I8.I.5I17.I23.I18.W2IW14.I3.2IQ2WQ2I3.I6.2IM3I2Q4P2Q3IM2I3.I2MDMIQ8PQIMD2MI2.IM3DIQ8PSI3DEI.IM3EIQ11SI4E25I48.',
+    '106.4I19.I4QI17.IQ4PQI16.IQ4PSI10.5I.IQ4PSI.5I4.I3MI2.IQ3SI2.I3MI4.IMDEI3.4I3.IMDEI4.IM2EI10.IM2EI4.5I10.5I60.W2IW14.I3.2IQ2WQ2I3.I6.2IM3I2Q4P2Q3IM2I3.I2MDMIQ8PQIMD2MI2.IM3DIQ8PSI3DEI.IM3EIQ11SI4E25I48.',
+  ] },
+  plug: { ms: 150, rest: 8, frames: [
+    '88.7I16.I7WI15.IW2LD2LMI15.IW5LMI5.5I5.IW5LMI4.I5MI4.IW5LMI4.IM3IEI3W.2I5LMI4.IM3DEI3M.2I5LM6IM3IEI4.IW3LMLM6IM3DEI4.IW3LMLMI4.IM3IEI3W.2I5LMI4.IM3DEI3M.2I5LMI4.IM4EI4.IW5LMI5.5I5.IW5LMI15.IW5LMI15.IW2LD2LMI15.IW6MI16.7I73.',
+    '88.7I16.I7WI15.IW2LD2LMI15.IW5LMI5.5I5.IW5LMI4.I5MI4.IW5LMI4.IM3IEI3W.2I5LMI4.IM3DEI3M.2I5LM6IM3IEI4.IW3LMLM6IM3DEI4.IW3LMLMI4.IM3IEI3W.2I5LMI4.IM3DEI3M.2I5LMI4.IM4EI4.IW5LMI5.5I5.IW5LMI15.IW5LMI15.IW2LD2LMI15.IW6MI16.7I73.',
+    '88.7I16.I7WI15.IW2LD2LMI15.IW5LMI6.5I4.IW5LMI5.I5MI3.IW5LMI5.IM3IEI3W2I5LMI5.IM3DEI3M2I5LM7IM3IEI3.IW3LMLM7IM3DEI3.IW3LMLMI5.IM3IEI3W2I5LMI5.IM3DEI3M2I5LMI5.IM4EI3.IW5LMI6.5I4.IW5LMI15.IW5LMI15.IW2LD2LMI15.IW6MI16.7I73.',
+    '88.7I16.I7WI15.IW2LD2LMI15.IW5LMI7.5I3.IW5LMI6.I5MI2.IW5LMI6.IM3IEI3WI5LMI6.IM3DEI3MI5LM8IM3IEI2.IW3LMLM8IM3DEI2.IW3LMLMI6.IM3IEI3WI5LMI6.IM3DEI3MI5LMI6.IM4EI2.IW5LMI7.5I3.IW5LMI15.IW5LMI15.IW2LD2LMI15.IW6MI16.7I73.',
+    '88.7I16.I7WI13.Q.IW2LD2LMI14.PIW5LMI7.5I3.IW5LMI6.I5MI2.IW5LMI6.IM3IEI3WI5LMI6.IM3DEI3MI5LM8IM3IEI2.IW3LPQM8IM3DEI2.IW3LPQMI6.IM3IEI3WI5LMI6.IM3DEI3MI5LMI6.IM4EI2.IW5LMI7.5I3.IW5LMI14.PIW5LMI13.Q.IW2LD2LMI15.IW6MI16.7I73.',
+    '88.7I16.I7WI15.IW2LD2LMI15.IW5LMI7.5I3.IW5LMI6.I5MI2.IW5LMI6.IM3IEI3WI5LMI6.IM3DEI3MI5LM5IPIPM3IEI2.IW3LPQM6IQIM3DEI2.IW3LPQMI6.IM3IEI3WI5LMI6.IM3DEI3MI5LMI6.IM4EI2.IW5LMI7.5I3.IW5LMI15.IW5LMI15.IW2LD2LMI15.IW6MI16.7I73.',
+    '88.7I16.I7WI15.IW2LD2LMI15.IW5LMI7.5I3.IW5LMI6.I5MI2.IW5LMI6.IM3IEI3WI5LMI6.IM3DEI3MI5LM2IPIP3IM3IEI2.IW3LPQM3IQ4IM3DEI2.IW3LPQMI6.IM3IEI3WI5LMI6.IM3DEI3MI5LMI6.IM4EI2.IW5LMI7.5I3.IW5LMI15.IW5LMI15.IW2LD2LMI15.IW6MI16.7I73.',
+    '88.7I16.I7WI15.IW2LD2LMI15.IW5LMI7.5I3.IW5LMI6.I5MI2.IW5LMI6.IM3IEI3WI5LMI6.IM3DEI3MI5LM8IM3IEI2.IW3LPQM8IM3DEI2.IW3LPQMI6.IM3IEI3WI5LMI6.IM3DEI3MI5LMI6.IM4EI2.IW5LMI7.5I3.IW5LMI15.IW5LMI15.IW2LD2LMI15.IW6MI16.7I73.',
+    '88.7I16.I7WI15.IW2LD2LMI15.IW5LMI7.5I3.IW5LMI6.I5MI2.IW5LMI6.IM3IEI3WI5LMI6.IM3DEI3MI5LM8IM3IEI2.IW3LPQM8IM3DEI2.IW3LPQMI6.IM3IEI3WI5LMI6.IM3DEI3MI5LMI6.IM4EI2.IW5LMI7.5I3.IW5LMI15.IW5LMI15.IW2LD2LMI15.IW6MI16.7I73.',
+  ] },
+  globe: { ms: 120, rest: 0, frames: [
+    '32.Q3.P43.8I14.2I2M3W3L2I11.I5M2W4LMI9.IW4M3WL2M3DI8.IM7W2M4DI7.I3M5WL2M4DEI6.I3M4W2L2M4DEI6.I4M2W5L3D2EI6.I4MW5L4M2DI6.I3M7L4MDEI6.I3M5L5M2DEI6.I3M4L5M2D2EI6.I2D3L6M3D2EI7.I9M4DEI8.I7M5D2EI9.I4M7DEI11.2I8D2I14.8I80.',
+    '37.Q2.P39.8I14.2I5W3L2I11.I2M5W4LMI9.I2M4W5M2DMI8.I5W5M4DI7.IM4W6M4DEI6.IM5W5M4DEI6.IM5WL3M4DEDI6.IM4W5L4M2DI6.IM2W7L2MD3EI6.IM7L4M4EI6.I7L4MD4EI6.I5L6M5EI7.I9MD4EI8.I7M3D4EI9.I4M5D3EI11.2I8D2I14.8I80.',
+    '65.Q14.8I14.2I5W3L2I.P9.I7W4LMI9.I3W8ML2MI8.I2W8M2D2MI7.I2W9M3DMDI6.I3W8M2D2MDI6.I3W7M3D2MDI6.I5W5L4M2DI6.I3W6L4DE2DI6.I8L4D2E2DI6.I7LM4D3EDI6.I5L3M2D4E2DI7.I7MD5EDI8.I7M5E2DI9.I4M3D3E2DI11.2I8D2I14.8I80.',
+    '80.8I14.2I5W3L2I2.Q8.I7W4LMI9.IW7M4L2MI8.I9M3L2MI2.P4.I11ML3MDI6.I10M2L3MDI6.IW8M2L4MDI6.I5W5L4M2DI6.I3W2L3M3D3M2DI6.I5L2M4D2M3DI6.I4LM11DI6.I4L6D2E4DI7.I4M4D2E4DI8.I4M2D4E4DI9.I4M4E4DI11.2I7DE2I14.8I80.',
+    '80.8I14.2I5W3L2I11.I7W4LDI9.I5M3W4L2DI8.I6M2W4L2DI7.I7MW4L2MDEI.Q4.I7M5L3MEI6.I5MW5L4MDI6.I5W5L4M2DI6.I2W5M3L4M2DI2.P3.I2L5MD5M3DI6.IL4M3D4M4DI6.I2L6D3M5DI7.IM6D2M5DI8.I2M4DE7DI9.I2M3E7DI11.2I4D4E2I14.8I80.',
+    '80.8I14.2I5W3L2I11.I7W2LM2DI9.I2M6W2LM3DI8.I3M5WLM4DI7.I4M4W3L4DEI6.I3M4W5L3DEI6.I2M4W5L4MDI6.I5W5L4M2DI6.I4M6L4M2DI6.I4M4L5M3DI.Q4.I5M2L5M4DI6.I5D6M5DI7.I4D5M5DI2.P5.I4D3M7DI9.I2DEM8DI11.2I2D4E2D2I14.8I80.',
+    '80.8I14.2I5W3L2I11.I7W3M2DI9.I7W4M3DI8.I6W4M4DI7.IM7W3M4DEI6.IM6W2L2M4DEI6.I6W5L4MDI6.I5W5L4M2DI6.IM2W7L4MDEI6.IM7L5MD2EI6.I2M5L5M2D2EI6.I2D3L6M3D2EI7.ID8M3D2EI8.I2D5M5D2EI.Q7.ID3M7DEI11.2I4E4D2I.P12.8I80.',
+    '80.8I14.2I5W3L2I11.I4W6M2DI9.I4W7M3DI8.I3W7M4DI7.I4W7M4DEI6.I6W5M4DEI6.I6W5L4MDI6.I5W5L4M2DI6.I3W7L3M3EI6.I8L3MD4EI6.I7L4MD4EI6.I5L6M5EI7.I9MD4EI8.I7M3D4EI9.I4M5D3EI11.2IE7D2I14.8I3.Q44.P31.',
+    '80.8I14.2I5W3L2I11.I2W8MLMI9.IW10M2DMI8.IW9M3DMI7.I2W9M3DMDI6.I2W9M3DMDI6.I6W5L4MDI6.I5W5L4M2DI6.I3W6L4DE2DI6.I8L4D3EDI6.I7L5D3EDI6.I5L2M3D5EDI7.I6M2D5EDI8.I7M5E2DI9.I4M3D3E2DI11.2I8D2I14.8I47.Q20.P11.',
+    '80.8I14.2I5W3L2I11.I8M3LMI9.I10M2L2MI8.I10MDL2MI7.I11MD3MEI6.I10M2L3MEI6.I6W5L4MEI6.I5W5L4MDEI6.I3W3L2M2D4MDEI6.I4L3M5DM2DEI6.I4LM11DI6.I4L6D2E4DI7.I3M5D3E3DI8.I4M2D4E4DI9.I4M4E4DI11.2I8D2I14.8I39.P2.Q37.',
+    '80.8I14.2I5W3L2I11.I5M2W4LMI9.I7MW4L2MI8.I8M4LMDI7.I8M4LM2DEI6.I7M5LM2DEI6.I6W5LM2D2EI6.I5W5L2M2D2EI6.I2W5M3L3M3EI6.IL6MD5M3EI6.IL4M4D3MD3EI6.IL8D2M3D2EI7.IM7DM5DI8.I2M4DE7DI9.I2M3E7DI9.P.2I8D2I14.8I14.Q65.',
+    '80.8I14.2I5W3L2I11.I3M4W4LMI9.I4M4W4L2MI8.I5M3W2L4DI7.I5M3W2LM4DEI6.I4M3W2L2M4DEI6.I6W3LM4D2EI6.I5W4L5D2EI6.I3M6L4D3EI6.I5M3LM3D4EI6.I5M2L3M2D4EI6.I5D6M5EI4.P2.I4D5M5DI8.I4D3M7DI9.I2DEM8DI8.Q2.2I8D2I14.8I80.',
+    '80.8I14.2I5W3L2I11.IM6W3L2DI9.I2M6W4L2DI8.I2M5W3M3DMI7.I2M5W4M5DI6.IM5W5M4DEI6.I5W5M4D2EI6.I5W4M5D2EI4.P.IM2W2L3M5D3EI6.I2M4LM5D4EI6.I2M5L5D3EDI4.Q.I2D3L3M2D4E2DI7.I2D7M5DI8.I2D5M7DI9.ID3M8DI11.2I8D2I14.8I80.',
+    '80.8I14.2I5WLMD2I11.I7W3M2DI9.I8WL2M2DMI5.P2.I4W6M2L2MI7.I3W8M2D2MDI6.I3W8M2D2MDI4.Q.I2W8M4DMDI6.I2W7M7DI6.I2W6M5DE2DI6.I3L4M5DE3DI6.I3L2M7DE3DI6.I5L5DE5DI7.I9M5DI8.I7M7DI9.I4M8DI11.2I8D2I14.8I80.',
+    '80.8I12.P.2I3W4ML2I11.I5W5MLMI7.Q.I6W5ML2MI8.IW6MW4L2MI7.IW8M3L3MEI6.I10M2L3MEI6.I10MD4MDI6.I9M2D3M2DI6.I8M3D3M2DI6.I7M3D3M3DI6.IL4M4D3M4DI6.I2L6D3M5DI7.I9M5DI8.I7M7DI9.I4M8DI11.2I8D2I14.8I80.',
+    '31.P44.Q3.8I14.2IW4M3L2I11.I2W5M4LMI9.I3W5M4L2DI8.I4M4W3L3DI7.I6M2W4L3DEI6.I7M5LM2DEI6.I7M4L3M2EI6.I7M3L4M2DI6.I7M3L4M2DI6.I7ML5M3DI6.I5MDL5M4DI6.I5D6M5DI7.I9M5DI8.I7M7DI9.I4M8DI11.2I8D2I14.8I80.',
+  ] },
+  blocks: { ms: 170, rest: 8, frames: [
+    '30.18I6.MIMIMIMIMIMIMIMIMI10.3D8.3I11.I9.IMI11.I9.3I11.I9.IMI10.IMI8.3I21.IMI21.3I21.IMI21.3I21.IMI21.3I21.IMI21.3I2.6I6.6I.IMI.I6WI4.I6W4I.IW2DL2DI4.IW2DL2D2IMI.IW4LMI4.IW4LM4I.IW2DL2DI4.IW2DL2D2IMI.IW5MI4.IW5M4I2.6I6.6I.IM25I',
+    '30.18I6.MIMIMIMIMIMIMIMIMI10.3D8.3I10.IMI8.IMI4.15I2.3I3.I15QI.IMI3.IQSW4SW4SW2SI.3I4.15I2.IMI21.3I21.IMI21.3I21.IMI21.3I21.IMI21.3I2.6I6.6I.IMI.I6WI4.I6W4I.IW2DL2DI4.IW2DL2D2IMI.IW4LMI4.IW4LM4I.IW2DL2DI4.IW2DL2D2IMI.IW5MI4.IW5M4I2.6I6.6I.IM25I',
+    '30.18I6.MIMIMIMIMIMIMIMIMI10.3D8.3I11.I9.IMI11.I9.3I10.IMI8.IMI4.15I2.3I3.I15QI.IMI3.IQSW4SW4SW2SI.3I4.15I2.IMI21.3I21.IMI21.3I21.IMI21.3I2.6I6.6I.IMI.I6WI4.I6W4I.IW2DL2DI4.IW2DL2D2IMI.IW4LMI4.IW4LM4I.IW2DL2DI4.IW2DL2D2IMI.IW5MI4.IW5M4I2.6I6.6I.IM25I',
+    '30.18I6.MIMIMIMIMIMIMIMIMI10.3D8.3I11.I9.IMI11.I9.3I11.I9.IMI11.I9.3I10.IMI8.IMI4.15I2.3I3.I15QI.IMI3.IQSW4SW4SW2SI.3I4.15I2.IMI21.3I21.IMI21.3I2.6I6.6I.IMI.I6WI4.I6W4I.IW2DL2DI4.IW2DL2D2IMI.IW4LMI4.IW4LM4I.IW2DL2DI4.IW2DL2D2IMI.IW5MI4.IW5M4I2.6I6.6I.IM25I',
+    '30.18I6.MIMIMIMIMIMIMIMIMI10.3D8.3I11.I9.IMI11.I9.3I11.I9.IMI11.I9.3I11.I9.IMI11.I9.3I11.I9.IMI10.IMI8.3I4.15I2.IMI3.I15QI.3I.M.IQSW4SW4SW2SI.2MI2.M.15I.M3I2.6I6.6I.IMI.I6WI4.I6W4I.IW2DL2DI4.IW2DL2D2IMI.IW4LMI4.IW4LM4I.IW2DL2DI4.IW2DL2D2IMI.IW5MI4.IW5M4I2.6I6.6I.IM25I',
+    '30.18I6.MIMIMIMIMIMIMIMIMI10.3D8.3I11.I9.IMI11.I9.3I11.I9.IMI11.I9.3I11.I9.IMI11.I9.3I11.I9.IMI10.IMI8.3I4.15I2.IMI3.I15QI.3I3.IQSW4SW4SW2SI.IMI4.15I2.3I2.6I6.6I.IMI.I6WI4.I6W4I.IW2DL2DI4.IW2DL2D2IMI.IW4LMI4.IW4LM4I.IW2DL2DI4.IW2DL2D2IMI.IW5MI4.IW5M4I2.6I6.6I.IM25I',
+    '30.18I6.MIMIMIMIMIMIMIMIMI10.3D8.3I11.I9.IMI11.I9.3I11.I9.IMI11.I9.3I10.IMI8.IMI21.3I21.IMI21.3I4.15I2.IMI3.I15QI.3I3.IQSW4SW4SW2SI.IMI4.15I2.3I2.6I6.6I.IMI.I6WI4.I6W4I.IW2DL2DI4.IW2DL2D2IMI.IW4LMI4.IW4LM4I.IW2DL2DI4.IW2DL2D2IMI.IW5MI4.IW5M4I2.6I6.6I.IM25I',
+    '30.18I6.MIMIMIMIMIMIMIMIMI10.3D8.3I11.I9.IMI10.IMI8.3I21.IMI21.3I21.IMI21.3I21.IMI21.3I4.15I2.IMI3.I15QI.3I3.IQSW4SW4SW2SI.IMI4.15I2.3I2.6I6.6I.IMI.I6WI4.I6W4I.IW2DL2DI4.IW2DL2D2IMI.IW4LMI4.IW4LM4I.IW2DL2DI4.IW2DL2D2IMI.IW5MI4.IW5M4I2.6I6.6I.IM25I',
+    '30.18I6.MIMIMIMIMIMIMIMIMI10.3D8.3I11.I9.IMI10.IMI8.3I21.IMI21.3I21.IMI21.3I21.IMI21.3I4.15I2.IMI3.I15QI.3I3.IQSW4SW4SW2SI.IMI4.15I2.3I2.6I6.6I.IMI.I6WI4.I6W4I.IW2DL2DI4.IW2DL2D2IMI.IW4LMI4.IW4LM4I.IW2DL2DI4.IW2DL2D2IMI.IW5MI4.IW5M4I2.6I6.6I.IM25I',
+  ] },
+};
+
+// Draws each icon at its rest frame and steps one at a time: loop() while a skill is hovered, focused
+// or pinned, once() when a skill is tapped open. Reduced motion always shows the rest frame, and a
+// hidden tab pauses the steps.
+const expertiseIcons = feature('Expertise icons', () => {
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const decode = code => code.replace(/(\d*)(\D)/g, (_, n, c) => c.repeat(n || 1)).match(/.{24}/g);
+  const icons = new Map();
+  document.querySelectorAll('[data-xp-icon]').forEach(slot => {
+    const data = XP_ICON_DATA[slot.dataset.xpIcon];
+    if (!data) return;
+    const svgs = data.frames.map(code => gridSvg(decode(code)));
+    icons.set(slot, { ...data, slot, svgs, frame: data.rest });
+    slot.innerHTML = svgs[data.rest];
+  });
+
+  let active = null, looping = false, left = 0, timer = 0;
+
+  const draw = (icon, frame) => {
+    if (icon.frame === frame) return;
+    icon.frame = frame;
+    icon.slot.innerHTML = icon.svgs[frame];
+  };
+
+  function tick() {
+    const icon = icons.get(active);
+    draw(icon, (icon.frame + 1) % icon.svgs.length);
+    if (!looping && --left <= 0) { active = null; return; }
+    schedule();
+  }
+
+  function schedule() {
+    clearTimeout(timer);
+    if (active && !document.hidden) timer = setTimeout(tick, icons.get(active).ms);
+  }
+
+  function stop() {
+    clearTimeout(timer);
+    if (active) draw(icons.get(active), icons.get(active).rest);
+    active = null;
+  }
+
+  // Start one icon from its rest frame; any other stops first, so only one ever moves
+  function play(item, loop) {
+    const slot = item && item.querySelector('[data-xp-icon]');
+    if (slot === active && loop && looping) return;
+    stop();
+    if (!icons.has(slot) || reduceMotion.matches) return;
+    active = slot;
+    looping = loop;
+    left = icons.get(slot).svgs.length;
+    schedule();
+  }
+
+  document.addEventListener('visibilitychange', schedule);
+  reduceMotion.addEventListener('change', () => { if (reduceMotion.matches) stop(); });
+
+  return { loop: item => play(item, true), once: item => play(item, false), stop };
 });
 
 // One mosaic tier: the image cover-cropped into the canvas at one sample per block, blown back up
@@ -1868,6 +1972,7 @@ feature('Expertise readout', function () {
   const canHover = window.matchMedia('(hover: hover)').matches;
   const inlineQuery = window.matchMedia('(hover: none) and (pointer: coarse), (max-width: 660px)');
   const CHAR_MS = 12;
+  const icons = expertiseIcons || { loop() {}, once() {}, stop() {} };
   let inline = false;
 
   const panel = document.createElement('div');
@@ -1948,7 +2053,15 @@ feature('Expertise readout', function () {
   }
 
   let shown = null, pinned = null, typeTimer = 0;
-  let intentTimer = 0, overPanel = false, pointerFocus = false, focusPinned = null;
+  let intentTimer = 0, overPanel = false, pointerFocus = false, focusPinned = null, hovered = null;
+
+  // With a mouse, the hovered skill's icon loops (else the pinned one's) and every other rests
+  function syncIcon() {
+    if (inline || !canHover) return;
+    const item = hovered || pinned;
+    if (item) icons.loop(item);
+    else icons.stop();
+  }
 
   // Put a skill (or the idle prompt) on the panel. Re-showing the same skill only refreshes
   // the prompt line, so pinning or unpinning never restarts the typing.
@@ -1971,6 +2084,11 @@ feature('Expertise readout', function () {
     }
     shown = item;
     clearInterval(typeTimer);
+    // Tapped open, the icon plays through once and settles, so nothing loops on a phone
+    if (inline || !canHover) {
+      if (item) icons.once(item);
+      else icons.stop();
+    }
     if (inline) {
       // Move the panel under the open skill before it fills, so the live region is in place
       panel.hidden = !item;
@@ -1997,6 +2115,7 @@ feature('Expertise readout', function () {
   function pin(item) {
     pinned = item;
     show(item || shown);
+    syncIcon();
   }
 
   // Panel under the grid, or inline under each skill; switching (say, resizing past 660px) starts fresh
@@ -2008,6 +2127,8 @@ feature('Expertise readout', function () {
     shown = null;
     pinned = null;
     focusPinned = null;
+    hovered = null;
+    icons.stop();
     items.forEach(i => {
       i.classList.remove('is-selected');
       i.removeAttribute('aria-pressed');
@@ -2047,12 +2168,18 @@ feature('Expertise readout', function () {
   items.forEach(item => {
     if (canHover) {
       item.addEventListener('mouseenter', () => {
+        hovered = item;
+        syncIcon();
         clearTimeout(intentTimer);
         intentTimer = setTimeout(() => {
           if (!pinned && !overPanel && !inline) show(item);
         }, INTENT_MS);
       });
-      item.addEventListener('mouseleave', () => clearTimeout(intentTimer));
+      item.addEventListener('mouseleave', () => {
+        clearTimeout(intentTimer);
+        if (hovered === item) hovered = null;
+        syncIcon();
+      });
     }
     item.addEventListener('pointerdown', () => { pointerFocus = true; });
     // Keyboard focus pins the focused skill; focus that comes from a click or tap is left to the click
