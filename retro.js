@@ -1773,7 +1773,7 @@ const retroTerminal = feature('Terminal', function () {
       'Some commands are not listed here...'),
     dir,
     open: openItem,
-    whoami: () => print('RUSSELL GREENE', 'Executive Producer @ BUCK // NYC', 'Leading the teams that turn ambitious creative into work that ships.', 'Off the clock: science, video games, and programming.'),
+    whoami: () => print('RUSSELL GREENE', 'Executive Producer @ BUCK // NYC', 'Winning the work, building the team, protecting the idea.', 'Off the clock: science, video games, and programming.'),
     contact: () => {
       const contact = document.getElementById('contact');
       if (!contact) { location.href = '/#contact'; return; }
