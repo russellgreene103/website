@@ -24,6 +24,8 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 | `Russell_Greene_Headshot.png` | Blue headshot; `_green`, `_red`, `_yellow` variants; `_mask.png` marks the backdrop on recoloured photos |
 | `work-media/` | Case-study images (`.webp`) for the work preview cards |
 | `favicon.svg` | Favicon |
+| `og-image.png` | 1200×630 share card (see SEO) |
+| `robots.txt`, `sitemap.xml` | Crawl rules and the one-URL sitemap (see SEO) |
 
 ## retro.js systems
 
@@ -53,6 +55,17 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 - Honour `prefers-reduced-motion` everywhere: skip steps and animations and apply the final state instantly.
 - Screen reader text is preserved: effects are `aria-hidden` overlays or visually-hidden copies, and the real text stays intact. Everything works without JS (it stays blue and static).
 
+## SEO
+
+- **Title** (`<title>Russell Greene — Executive Producer at BUCK</title>`) and the **meta description** are what search results show. The description is reused, character for character, by `og:description` and the JSON-LD `description`; change all three together.
+- **Canonical** (`https://russellgreene.com/`) tells search engines which URL is the real one, so `www`, `http` and the `pages.dev` copies don't compete with it.
+- **Person JSON-LD** (one `application/ld+json` block in the head) tells Google who the page is about: name, URL, headshot, job title, BUCK, the meta description and LinkedIn. Exactly those fields; no location.
+- **Open Graph and Twitter tags** control link previews in Slack, LinkedIn, iMessage, X and the rest. Every URL in them is absolute.
+- **`og-image.png`** is built from an HTML template kept outside this repo in `~/projects/russellgreene/tools/og-card/` (see its README): it captures the site's own dithered blue headshot and renders the "DOS window" card in headless Chrome. **Regenerate it whenever the name, title or headshot changes.**
+- **`robots.txt`** allows everything and points to **`sitemap.xml`**, which lists only the homepage (update its `lastmod` when the homepage changes meaningfully). `_redirects` must never catch either file.
+- **/vibe and /sig** carry `<meta name="robots" content="noindex">`. They must stay crawlable (never block them in robots.txt), or search engines can't read the noindex.
+- Domain redirects (`www`, `http`, `pages.dev`) live in the Cloudflare dashboard, not in this repo. Preview deploys get `X-Robots-Tag: noindex` from Cloudflare automatically.
+
 ## Asset versions (cache busting)
 
 - russellgreene.com's Cloudflare zone sends `.js`/`.css` with a 4-hour browser cache (`max-age=14400`), while HTML is always fresh. Without versioned URLs a returning visitor can get new HTML with an old script. That's how the contact form once fell through to Formspree's own page on a phone.
@@ -61,7 +74,7 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 
 ## Testing
 
-- **Saved suites** live outside this repo (so they never publish) in `~/projects/russellgreene/tests/`: `icons.mjs` (expertise icons against `fixtures/`), `regress.mjs` (the current copy: bio, meta description, expertise and WHOAMI; features, mobile, header, footer, contact with Formspree mocked, /vibe), `compare.mjs` (desktop pixel comparison against a baseline) and `review.mjs` (review screenshots). Run all three suites with `./run.sh [baseline-ref]` (default `main`): it serves this working tree on :8765 and a worktree of the ref on :8766. See its README.md.
+- **Saved suites** live outside this repo (so they never publish) in `~/projects/russellgreene/tests/`: `icons.mjs` (expertise icons against `fixtures/`), `regress.mjs` (the current copy: bio, meta description, expertise and WHOAMI; SEO tags, og-image.png, robots.txt, sitemap.xml and noindex on /vibe and /sig; features, mobile, header, footer, contact with Formspree mocked, /vibe), `compare.mjs` (desktop pixel comparison against a baseline) and `review.mjs` (review screenshots). Run all three suites with `./run.sh [baseline-ref]` (default `main`): it serves this working tree on :8765 and a worktree of the ref on :8766. See its README.md.
 
 - Serve over local HTTP, since canvas `getImageData` needs it: `python3 -m http.server 8765`.
 - Use headless Chrome through `puppeteer-core`, pointed at `/Applications/Google Chrome.app`. Install it in a scratch dir, not the repo.
