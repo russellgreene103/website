@@ -22,7 +22,7 @@ const TOUCH = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 // Accent themes: the colours match the inline <head> script and retro.css
 const THEMES = { blue: '#1f3bd6', green: '#10633b', red: '#c52e13', yellow: '#d7a13f' };
 const currentTheme = () => (THEMES[document.documentElement.dataset.theme] ? document.documentElement.dataset.theme : 'blue');
-const themePhoto = theme => (theme === 'blue' ? '/Russell_Greene_Headshot.png' : `/Russell_Greene_Headshot_${theme}.png`);
+const themePhoto = theme => (theme === 'blue' ? '/Russell_Greene_Headshot-520.webp' : `/Russell_Greene_Headshot_${theme}-520.webp`);
 const hexRgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
 
 // Switch the whole site's accent (the headshot listens for retro:theme and redraws)
@@ -1017,7 +1017,7 @@ feature('Headshot', function () {
     if (!maskLoaded) {
       maskLoaded = new Promise(resolve => {
         mask.onload = mask.onerror = resolve;
-        mask.src = '/Russell_Greene_Headshot_mask.png';
+        mask.src = '/Russell_Greene_Headshot_mask-520.webp';
       });
     }
     return maskLoaded;
@@ -1338,6 +1338,10 @@ feature('Headshot', function () {
     });
   }
 });
+
+// The dither canvas now covers the photo (or the headshot couldn't set up): let the photo show.
+// The page's head script hides it until here so the real photo never paints before the dither.
+document.documentElement.classList.remove('photo-pending');
 
 // Hidden DOS terminal — backtick anywhere (outside form fields) or the prompt clock opens it
 const retroTerminal = feature('Terminal', function () {

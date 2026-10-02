@@ -13,6 +13,11 @@
       if (!colors[theme]) theme = 'blue';
       document.documentElement.dataset.theme = theme;
       document.querySelector('meta[name="theme-color"]').content = colors[theme];
+      // Hide the photo (keeping its space) until retro.js has covered it with the dither canvas, so the
+      // real photo never flashes first; if retro.js never runs, show it anyway after 3s
+      var root = document.documentElement;
+      root.classList.add('photo-pending');
+      setTimeout(function () { root.classList.remove('photo-pending'); }, 3000);
     })();
   </script>
   <title>Russell Greene — Executive Producer at BUCK</title>
@@ -49,9 +54,83 @@
     ]
   }
   </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&family=Silkscreen&family=VT323&display=swap" rel="stylesheet" />
+  <link rel="preload" href="/fonts/cormorant-garamond-normal-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/cormorant-garamond-italic-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <style>
+    /* Self-hosted copies of the Google Fonts latin subsets, @font-face rules as Google declares them */
+    @font-face {
+      font-family: 'Cormorant Garamond';
+      font-style: italic;
+      font-weight: 300;
+      font-display: swap;
+      src: url(/fonts/cormorant-garamond-italic-latin.woff2) format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'Cormorant Garamond';
+      font-style: italic;
+      font-weight: 400;
+      font-display: swap;
+      src: url(/fonts/cormorant-garamond-italic-latin.woff2) format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'Cormorant Garamond';
+      font-style: normal;
+      font-weight: 300;
+      font-display: swap;
+      src: url(/fonts/cormorant-garamond-normal-latin.woff2) format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'Cormorant Garamond';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url(/fonts/cormorant-garamond-normal-latin.woff2) format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'Cormorant Garamond';
+      font-style: normal;
+      font-weight: 500;
+      font-display: swap;
+      src: url(/fonts/cormorant-garamond-normal-latin.woff2) format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'DM Mono';
+      font-style: normal;
+      font-weight: 300;
+      font-display: swap;
+      src: url(/fonts/dm-mono-300-latin.woff2) format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'DM Mono';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url(/fonts/dm-mono-400-latin.woff2) format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'Silkscreen';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url(/fonts/silkscreen-400-latin.woff2) format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'VT323';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url(/fonts/vt323-400-latin.woff2) format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+  </style>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -467,11 +546,15 @@
 
     .hero-photo {
       width: 100%;
+      height: auto; /* the width/height attributes only reserve space; the aspect ratio sets the size */
       aspect-ratio: 3 / 4;
       object-fit: cover;
       object-position: center top;
       display: block;
     }
+
+    /* Until retro.js has laid the dither canvas over it (see the head script) */
+    .photo-pending .hero-photo { visibility: hidden; }
 
     /* ── Fade in on load ── */
     @keyframes fadeUp {
@@ -585,8 +668,8 @@
         <a href="#contact" class="hero-cta dos-button"><span class="dos-button-icon" data-icon="envelope" aria-hidden="true"></span><span class="dos-button-label">Get in touch</span><b class="block-cursor dos-button-cursor" aria-hidden="true"></b></a>
       </div>
       <div class="hero-photo-wrap">
-        <img src="Russell_Greene_Headshot.png" alt="Russell Greene" class="hero-photo" />
-        <script>(function (t) { if (t && t !== 'blue') document.currentScript.previousElementSibling.src = 'Russell_Greene_Headshot_' + t + '.png'; })(document.documentElement.dataset.theme);</script>
+        <img src="Russell_Greene_Headshot-520.webp" alt="Russell Greene" class="hero-photo" width="520" height="694" fetchpriority="high" />
+        <script>(function (t) { if (t && t !== 'blue') document.currentScript.previousElementSibling.src = 'Russell_Greene_Headshot_' + t + '-520.webp'; })(document.documentElement.dataset.theme);</script>
       </div>
     </div>
   </section>
@@ -885,7 +968,7 @@
 
 </div>
 
-<script src="/retro.js?v=2a30b948"></script>
+<script src="/retro.js?v=0b5449f2"></script>
 <script src="/contact.js?v=1ab35bea"></script>
 
 </body>

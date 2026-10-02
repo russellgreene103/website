@@ -21,7 +21,9 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 | `retro.js` | Shared retro effects for both pages. Each feature sets itself up inside `feature(name, fn)`, so one throwing is logged by name and never stops the others |
 | `contact.js` | Homepage contact form (validation and the MAIL.EXE send sequence). Its own file so a broken or stale `retro.js` can't stop the form; it only borrows retro.js art if it's there |
 | `rocks.js` | ROCKS.EXE game (`window.RocksGame`), loaded on demand from the terminal |
-| `Russell_Greene_Headshot.png` | Blue headshot; `_green`, `_red`, `_yellow` variants; `_mask.png` marks the backdrop on recoloured photos |
+| `Russell_Greene_Headshot-520.webp` | The headshot the page uses: 520×694 WebP (2× the 260px desktop slot); `_green`, `_red`, `_yellow` variants; `_mask-520.webp` (lossless) marks the backdrop on recoloured photos. Regenerate all five together from the originals |
+| `Russell_Greene_Headshot.png` (+ `_green`, `_red`, `_yellow`, `_mask`) | The 832×1102 originals (JPEG data despite the `.png` name). Kept: the JSON-LD `image` and the og-card tool use the blue one, and they're the source for the WebPs |
+| `fonts/` | Self-hosted woff2 files: Cormorant Garamond (normal and italic, variable), DM Mono 300 and 400, Silkscreen, VT323. Latin subsets copied from Google Fonts |
 | `work-media/` | Case-study images (`.webp`) for the work preview cards |
 | `favicon.svg` | Favicon |
 | `og-image.png` | 1200×630 share card (see SEO) |
@@ -30,7 +32,7 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 ## retro.js systems
 
 - **Themes:** `THEMES` (blue, green, red, yellow) must match the head script and `retro.css`. `setTheme()` sets `html[data-theme]` and the theme-color meta, then fires `retro:theme`; listeners (e.g. the headshot) react to that event. Reload always returns to blue.
-- **Headshot:** the photo is Bayer-dithered onto a canvas, with a dial-up band reveal on first view. Hover resolves through mosaic tiers (16px, 8px, 4px, then the real photo) and steps back down on leave.
+- **Headshot:** the photo is Bayer-dithered onto a canvas, with a dial-up band reveal on first view. The head script adds `html.photo-pending` (the photo is `visibility: hidden`, keeping its space) and retro.js removes it right after the Headshot feature has laid the canvas over the photo, so the real photo never flashes first; the head script also removes it after 3s in case retro.js never runs. Without JS the plain photo shows. Hover resolves through mosaic tiers (16px, 8px, 4px, then the real photo) and steps back down on leave.
 - **Click-to-cycle colours:** click, tap, or Enter/Space on the headshot (`role="button"`) goes blue → green → red → yellow. It steps down to 16px, switches the site theme there, then resolves up in the new photo. The next photo is preloaded on the first pointer enter or focus. Changes are announced through an aria-live region.
 - **Pixel cursor** (fine pointers only): the arrow, the hand (`html.cursor-link`, over links, buttons and `[role=button]`), and the hourglass (`html.cursor-wait`, which wins over the hand). Hidden over form fields.
 - **Click effects:** a random pixel burst on mousedown (or a touch tap that doesn't scroll), never the same effect twice in a row. `makeClickEffects()` is shared by both.
@@ -54,6 +56,12 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 - Touch-only styles and behaviour sit behind `(hover: none) and (pointer: coarse)` (the `TOUCH` constant in retro.js); small-screen layout sits behind `max-width: 660px`. Desktop must stay pixel-identical when changing either.
 - Honour `prefers-reduced-motion` everywhere: skip steps and animations and apply the final state instantly.
 - Screen reader text is preserved: effects are `aria-hidden` overlays or visually-hidden copies, and the real text stays intact. Everything works without JS (it stays blue and static).
+
+## Fonts
+
+- Self-hosted in `/fonts/` (no Google Fonts requests). The `@font-face` rules are inlined in the `<head>` of index.html and vibe/index.html, copied from Google's latin blocks with only the URLs changed: same unicode-range, weights, styles and `font-display: swap`.
+- Only the two Cormorant files are preloaded (with `crossorigin`). VT323 has no preload, so it loads only when the terminal or MAIL.EXE first uses it; retro.js asks for Silkscreen up front with `document.fonts.load`.
+- sig/ still links Google Fonts (DM Mono 400) on purpose: it's an email signature page, left as is.
 
 ## SEO
 
