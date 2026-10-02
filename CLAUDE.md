@@ -27,6 +27,7 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 | `work-media/` | Case-study images (`.webp`) for the work preview cards |
 | `favicon.svg` | Favicon |
 | `404.html` | The not-found page (see below) |
+| `_headers` | Security headers for Cloudflare Pages, including the CSP with generated hash lists (see below) |
 | `og-image.png` | 1200×630 share card (see SEO) |
 | `robots.txt`, `sitemap.xml` | Crawl rules and the one-URL sitemap (see SEO) |
 
@@ -77,6 +78,13 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 - It loads retro.css (buttons, cursor, theme tokens) and inlines `@font-face` for just DM Mono 300, Silkscreen and VT323. No retro.js or contact.js.
 - `_redirects` must never get a catch-all rule, or the 404 page stops working.
 
+## Security headers
+
+- `_headers` (Cloudflare Pages) sets, on every path: an enforced Content-Security-Policy, `Strict-Transport-Security: max-age=86400`, `X-Frame-Options: DENY`, `Cross-Origin-Opener-Policy: same-origin`, a Permissions-Policy that denies camera, microphone, geolocation, payment and usb, `nosniff` and `strict-origin-when-cross-origin`, and it drops Pages' default `Access-Control-Allow-Origin: *`.
+- The `/*` policy allows only this origin, plus the Cloudflare analytics beacon (`static.cloudflareinsights.com`) and Formspree (`connect-src` and `form-action`). Inline scripts and styles are allowed by sha256 hash, never `'unsafe-inline'`; JSON-LD needs no hash. Styling from JS through `element.style` is fine; `setAttribute('style')`, injected `<style>` and `style="…"` inside `innerHTML` strings are blocked.
+- `/sig/*` has its own policy: it first detaches the `/*` one (`! Content-Security-Policy`), because Pages joins a header set by two rules and browsers would enforce both. Its styles use `'unsafe-inline'` (an email signature needs inline styles) and it allows Google Fonts.
+- Adding a new external host (an embed, a font, an analytics script) means adding it to the right directive in `_headers` first.
+
 ## Fonts
 
 - Self-hosted in `/fonts/` (no Google Fonts requests). The `@font-face` rules are inlined in the `<head>` of index.html and vibe/index.html, copied from Google's latin blocks with only the URLs changed: same unicode-range, weights, styles and `font-display: swap`.
@@ -100,6 +108,8 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 - So every script and stylesheet URL carries `?v=<first 8 of its sha1>`: `retro.css`, `retro.js` and `contact.js` in both pages, and `rocks.js` inside retro.js. **After changing any of them, rerun this (rocks.js first, since its version lives in retro.js):**
   `for f in rocks.js retro.css retro.js contact.js; do v=$(shasum "$f" | cut -c1-8); sed -i '' -E "s#/$f(\?v=[0-9a-f]+)?#/$f?v=$v#g" retro.js index.html vibe/index.html 404.html; done`
 - 404.html loads retro.css too: whenever retro.css's tag is bumped, 404.html's must be bumped with it (the command above does both).
+- **After editing any inline `<script>` or `<style>`** (in index.html, vibe/index.html, 404.html or sig/index.html, even a comment), recompute the CSP hashes, or the browser will block that block on the live site:
+  `node ~/projects/russellgreene/tests/update-csp-hashes.mjs` (add `--check` to only report). The regression suite fails if a hash is missing.
 
 ## Testing
 
