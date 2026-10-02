@@ -546,6 +546,7 @@ feature('Pixel cursor', function () {
   }
 
   let mx = 0, my = 0, lastX = 0, lastY = 0, travel = 0, nextBit = 0;
+  let anchor = null; // where the card hangs when keyboard focus opened it (the pointer takes over when it moves)
   let seen = false, overField = false;
 
   // Row previews that follow the pointer: work rows get a media card, /vibe project rows get a
@@ -653,12 +654,16 @@ feature('Pixel cursor', function () {
   }
 
   // 20px right and 16px below the pointer, flipping left or up at the viewport edges
+  function followPos(w, h) {
+    const px = anchor ? anchor.x : mx, py = anchor ? anchor.y : my;
+    const flipX = px + 20 + w + 6 > innerWidth;
+    const flipY = py + 16 + h + 6 > innerHeight;
+    return { x: Math.round(flipX ? px - 20 - w : px + 20), y: Math.round(flipY ? py - 16 - h : py + 16), flipX, flipY };
+  }
+
   function follow(el, w, h) {
-    const flipX = mx + 20 + w + 6 > innerWidth;
-    const flipY = my + 16 + h + 6 > innerHeight;
-    const x = flipX ? mx - 20 - w : mx + 20;
-    const y = flipY ? my - 16 - h : my + 16;
-    el.style.translate = `${Math.round(x)}px ${Math.round(y)}px`;
+    const { x, y, flipX, flipY } = followPos(w, h);
+    el.style.translate = `${x}px ${y}px`;
     el.style.transformOrigin = `${flipX ? 'right' : 'left'} ${flipY ? 'bottom' : 'top'}`;
   }
 
@@ -742,8 +747,69 @@ feature('Pixel cursor', function () {
     else window.addEventListener('load', () => whenIdle(preload), { once: true });
   }
 
-  function showCard(row) {
-    if (!card || row === cardRow) return;
+  // The featured row's entrance: when the card opens onto it from closed (the pointer arriving from
+  // outside the list, or keyboard focus), three ink outlines step from its thumbnail to where the
+  // card will sit, 50ms apart, then the card opens as usual. Row to row, the open card just swaps.
+  const ZOOM_STEPS = [1 / 3, 2 / 3, 1], ZOOM_MS = 50;
+  const zoomBoxes = [];
+  let zoomRow = null, zoomTimer = 0;
+
+  function stopZoom() {
+    clearTimeout(zoomTimer);
+    zoomRow = null;
+    zoomBoxes.forEach(b => { b.hidden = true; });
+  }
+
+  function zoomOpen(row) {
+    if (!zoomBoxes.length) {
+      for (let i = 0; i < ZOOM_STEPS.length; i++) {
+        const b = document.createElement('div');
+        b.className = 'work-zoom';
+        b.setAttribute('aria-hidden', 'true');
+        b.hidden = true;
+        document.body.append(b);
+        zoomBoxes.push(b);
+      }
+    }
+    if (!cardW) {
+      // Measure the closed card once, invisibly
+      card.style.visibility = 'hidden';
+      card.style.display = 'block';
+      cardW = card.offsetWidth;
+      cardH = card.offsetHeight;
+      card.style.display = card.style.visibility = '';
+    }
+    zoomRow = row;
+    const from = row.querySelector('.work-feature').getBoundingClientRect();
+    let k = 0;
+    const step = () => {
+      if (k < ZOOM_STEPS.length) {
+        const t = ZOOM_STEPS[k], to = followPos(cardW, cardH), b = zoomBoxes[k++];
+        const lerp = (a, z) => Math.round(a + (z - a) * t);
+        b.style.translate = `${lerp(from.left, to.x)}px ${lerp(from.top, to.y)}px`;
+        b.style.width = `${lerp(from.width, cardW)}px`;
+        b.style.height = `${lerp(from.height, cardH)}px`;
+        b.hidden = false;
+        zoomTimer = setTimeout(step, ZOOM_MS);
+      } else {
+        stopZoom();
+        showCard(row, true);
+      }
+    };
+    step();
+  }
+
+  function showCard(row, zoomed = false) {
+    if (!card) return;
+    if (zoomRow) {
+      if (row === zoomRow) return;
+      stopZoom(); // another row, or nothing: the card does what it would have without the entrance
+    }
+    if (row === cardRow) return;
+    if (row && !cardRow && !zoomed && row.classList.contains('is-featured') && !reduceMotion.matches) {
+      zoomOpen(row);
+      return;
+    }
     const wasOpen = !!cardRow;
     cardRow = row;
     const token = ++cardToken; // later rows win; anything still pending for an older row stops
@@ -803,8 +869,7 @@ feature('Pixel cursor', function () {
     root.classList.toggle('cursor-over-field', overField);
     root.classList.toggle('cursor-link', !!link);
     const type = row && rowType(row);
-    // The featured work row already shows its image, so it gets no card
-    showCard(type && type.card && !row.classList.contains('is-featured') ? row : null);
+    showCard(type && type.card ? row : null);
     showWindow(type && !type.card ? row : null);
   }
 
@@ -812,6 +877,7 @@ feature('Pixel cursor', function () {
     if (e.pointerType === 'touch') return;
     mx = e.clientX;
     my = e.clientY;
+    anchor = null;
     cursor.style.translate = `${Math.round(mx)}px ${Math.round(my)}px`;
     root.classList.add('cursor-visible');
     setState(e.target);
@@ -836,8 +902,26 @@ feature('Pixel cursor', function () {
 
   // Content moves under a still pointer while scrolling
   window.addEventListener('scroll', () => {
-    if (seen) setState(document.elementFromPoint(mx, my));
+    if (seen && !anchor) setState(document.elementFromPoint(mx, my));
   }, { passive: true });
+
+  // Keyboard: focus landing on the featured row's link opens its card (with the entrance), hung off the
+  // thumbnail; like every other row, no card follows focus anywhere else
+  document.addEventListener('focusin', e => {
+    const row = e.target.closest && e.target.closest('.work-item.is-featured');
+    if (row && e.target.matches('.work-link:focus-visible')) {
+      if (cardRow || zoomRow) return; // the pointer already has it open
+      const r = row.querySelector('.work-feature').getBoundingClientRect();
+      anchor = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      showCard(row);
+    } else if (anchor) {
+      anchor = null;
+      showCard(null);
+    }
+  });
+  document.addEventListener('focusout', e => {
+    if (anchor && !e.relatedTarget) { anchor = null; showCard(null); }
+  });
 
   document.addEventListener('mouseout', e => {
     if (e.relatedTarget) return;

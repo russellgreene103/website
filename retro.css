@@ -604,6 +604,18 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 .work-card.is-missing .work-card-fallback { display: grid; }
 .work-card.is-missing img { visibility: hidden; }
 
+/* The featured row's zoom entrance: ink outlines stepping from its thumbnail to the card (added by JS) */
+.work-zoom {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9997;
+  pointer-events: none;
+  border: 1px solid var(--ink);
+}
+
+.work-zoom[hidden] { display: none; }
+
 /* Collapsible work list: hidden rows are gone entirely; the button sits under the rows' column */
 .work-item[hidden] { display: none; }
 .work-more {
