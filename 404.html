@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1f3bd6" />
+  <script>
+    // Accent theme, set before first paint: always blue, except ?theme= forces one for testing
+    (function () {
+      var colors = { blue: '#1f3bd6', green: '#10633b', red: '#c52e13', yellow: '#d7a13f' };
+      var theme = new URLSearchParams(location.search).get('theme');
+      if (!colors[theme]) theme = 'blue';
+      document.documentElement.dataset.theme = theme;
+      document.querySelector('meta[name="theme-color"]').content = colors[theme];
+    })();
+  </script>
+  <title>Bad command or file name — Russell Greene</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <!-- Served for any unknown address at any depth, so every path here starts with / -->
+  <style>
+    /* Self-hosted fonts this page uses, as declared in index.html */
+    @font-face {
+      font-family: 'DM Mono';
+      font-style: normal;
+      font-weight: 300;
+      font-display: swap;
+      src: url(/fonts/dm-mono-300-latin.woff2) format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'Silkscreen';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url(/fonts/silkscreen-400-latin.woff2) format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'VT323';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url(/fonts/vt323-400-latin.woff2) format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #0e0e0e;
+      --paper: #f5f3ef;
+      --mid: #6f6f6f;
+      --pixel: #1f3bd6;         /* accent fill (themes override these in retro.css) */
+      --on-pixel: var(--paper); /* text and icons on --pixel */
+      --pixel-text: #1f3bd6;    /* accent text on --paper */
+      --mono: 'DM Mono', 'Courier New', monospace;
+    }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--mono);
+      font-weight: 300;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    main {
+      width: 100%;
+      max-width: 560px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* A DOS window, like the contact form's compose window */
+    .window {
+      background: var(--paper);
+      border: 1px solid var(--ink);
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+
+    .window-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 7px 12px;
+      background: var(--pixel);
+      color: var(--on-pixel);
+      border-bottom: 1px solid var(--ink);
+      font-family: 'Silkscreen', var(--mono);
+      font-size: 11px;
+      line-height: 1;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .window-screen {
+      padding: 20px 20px 24px;
+      font-family: 'VT323', var(--mono);
+      font-size: 22px;
+      line-height: 1.2;
+      overflow-wrap: anywhere; /* a long address wraps instead of pushing the page sideways */
+    }
+
+    /* The h1 is a line of the window's text, not a headline */
+    .window-screen h1 {
+      font: inherit;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 16px;
+    }
+  </style>
+  <link rel="stylesheet" href="/retro.css?v=66d8c8dd" />
+</head>
+<body>
+
+<main>
+  <div class="window">
+    <div class="window-title" aria-hidden="true"><span>COMMAND.COM</span><span>[■]</span></div>
+    <div class="window-screen">
+      <p>C:\&gt; CD <span id="bad-path">\UNKNOWN</span></p>
+      <script>
+        // The typed path, from the address bar's path only (never the query or hash). The address is
+        // untrusted input: it only ever goes in with textContent.
+        (function () {
+          var raw = location.pathname, text;
+          try { text = decodeURIComponent(raw); } catch (e) { text = raw; }
+          text = text.replace(/^\/+/, '').replace(/\//g, '\\').toUpperCase();
+          var chars = Array.from(text);
+          if (chars.length > 40) text = chars.slice(0, 40).join('') + '…';
+          document.getElementById('bad-path').textContent = '\\' + text;
+        })();
+      </script>
+      <h1>Bad command or file name</h1>
+      <p aria-hidden="true">&nbsp;</p>
+      <p>C:\&gt;<b class="block-cursor" aria-hidden="true"></b></p>
+    </div>
+  </div>
+
+  <div class="actions">
+    <a class="dos-button" href="/"><span class="dos-button-label">Home</span><b class="block-cursor dos-button-cursor" aria-hidden="true"></b></a>
+    <a class="dos-button" href="/#work"><span class="dos-button-label">Work</span><b class="block-cursor dos-button-cursor" aria-hidden="true"></b></a>
+    <a class="dos-button" href="/#contact"><span class="dos-button-label">Contact</span><b class="block-cursor dos-button-cursor" aria-hidden="true"></b></a>
+  </div>
+</main>
+
+</body>
+</html>

@@ -26,6 +26,7 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 | `fonts/` | Self-hosted woff2 files: Cormorant Garamond (normal and italic, variable), DM Mono 300 and 400, Silkscreen, VT323. Latin subsets copied from Google Fonts |
 | `work-media/` | Case-study images (`.webp`) for the work preview cards |
 | `favicon.svg` | Favicon |
+| `404.html` | The not-found page (see below) |
 | `og-image.png` | 1200×630 share card (see SEO) |
 | `robots.txt`, `sitemap.xml` | Crawl rules and the one-URL sitemap (see SEO) |
 
@@ -67,6 +68,15 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 - The prompt clock's accessible name starts with its visible text (`C:\NYC> 7:27 AM, New York time. Open terminal`).
 - The hero fadeUp is off under `prefers-reduced-motion: reduce`.
 
+## 404 page
+
+- `404.html` at the root: Cloudflare Pages serves it, with a 404 status, for any path that matches no file, at any depth (`/old-portfolio`, `/a/b/c`, `/vibe/nope`). Without it, Pages would serve the homepage with a 200.
+- Design "Bad command or file name": a COMMAND.COM DOS window in VT323 (`C:\> CD \<PATH>`, the h1 "Bad command or file name", then a prompt with the block cursor) and HOME / WORK / CONTACT `.dos-button` links, inside `<main>`. Same accent-theme head script; `noindex`; no canonical and no og tags.
+- **Every asset and link path in it must stay absolute** (start with `/`), because it's served at any depth.
+- The path line is built from `location.pathname` only (never the query or hash), decoded with a fallback to the raw text, slash to backslash, uppercased, cut at 40 characters with "…". **The address is untrusted input: it's inserted with `textContent` only, never `innerHTML`.** Without JS the line reads `CD \UNKNOWN`.
+- It loads retro.css (buttons, cursor, theme tokens) and inlines `@font-face` for just DM Mono 300, Silkscreen and VT323. No retro.js or contact.js.
+- `_redirects` must never get a catch-all rule, or the 404 page stops working.
+
 ## Fonts
 
 - Self-hosted in `/fonts/` (no Google Fonts requests). The `@font-face` rules are inlined in the `<head>` of index.html and vibe/index.html, copied from Google's latin blocks with only the URLs changed: same unicode-range, weights, styles and `font-display: swap`.
@@ -88,7 +98,8 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 
 - russellgreene.com's Cloudflare zone sends `.js`/`.css` with a 4-hour browser cache (`max-age=14400`), while HTML is always fresh. Without versioned URLs a returning visitor can get new HTML with an old script. That's how the contact form once fell through to Formspree's own page on a phone.
 - So every script and stylesheet URL carries `?v=<first 8 of its sha1>`: `retro.css`, `retro.js` and `contact.js` in both pages, and `rocks.js` inside retro.js. **After changing any of them, rerun this (rocks.js first, since its version lives in retro.js):**
-  `for f in rocks.js retro.css retro.js contact.js; do v=$(shasum "$f" | cut -c1-8); sed -i '' -E "s#/$f(\?v=[0-9a-f]+)?#/$f?v=$v#g" retro.js index.html vibe/index.html; done`
+  `for f in rocks.js retro.css retro.js contact.js; do v=$(shasum "$f" | cut -c1-8); sed -i '' -E "s#/$f(\?v=[0-9a-f]+)?#/$f?v=$v#g" retro.js index.html vibe/index.html 404.html; done`
+- 404.html loads retro.css too: whenever retro.css's tag is bumped, 404.html's must be bumped with it (the command above does both).
 
 ## Testing
 
