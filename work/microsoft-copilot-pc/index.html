@@ -278,6 +278,12 @@
       color: #444;
     }
 
+    /* Photos: a full-width row (label above it, like the hero) of three DOS-framed stills */
+    .case-section-wide {
+      grid-template-columns: 1fr;
+      gap: 20px 0;
+    }
+
     /* Photos: three DOS-framed stills */
     .case-photos {
       list-style: none;
@@ -392,6 +398,7 @@
     <!-- Hero loop: decorative; retro.js plays it in view (never under reduced motion) -->
     <div class="case-hero-media">
       <video class="case-video" muted loop playsinline preload="none" poster="/work/microsoft-copilot-pc/hero-poster.webp" width="1280" height="720" aria-hidden="true">
+        <source src="/work/microsoft-copilot-pc/hero-720.mp4" type="video/mp4" media="(max-width: 660px)" />
         <source src="/work/microsoft-copilot-pc/hero.mp4" type="video/mp4" />
       </video>
       <button type="button" class="dos-button case-video-toggle" aria-label="Pause animation" hidden><span class="dos-button-label">Pause</span></button>
@@ -425,13 +432,13 @@
       </div>
     </section>
 
-    <section class="case-section" aria-labelledby="photos-label">
+    <section class="case-section case-section-wide" aria-labelledby="photos-label">
       <h2 class="section-label" id="photos-label" data-command="DIR PHOTOS">Photos</h2>
       <div class="case-body">
           <ul class="case-photos">
-            <li><img src="/work/microsoft-copilot-pc/portrait-new-york.webp" width="1200" height="1500" loading="lazy" decoding="async" alt="Portrait from the New York shoot: a woman in a mint knit polo, lit by warm window light falling across a pink wall." /></li>
-            <li><img src="/work/microsoft-copilot-pc/render-copilot-key.webp" width="1200" height="1500" loading="lazy" decoding="async" alt="CG render: a laptop keyboard with a beam of warm light crossing the Copilot key." /></li>
-            <li><img src="/work/microsoft-copilot-pc/retail-display.webp" width="1200" height="1500" loading="lazy" decoding="async" alt="Retail display in a shop window: a tall screen introducing the Copilot key, with Surface devices on plinths." /></li>
+            <li><img src="/work/microsoft-copilot-pc/portrait-new-york.webp" srcset="/work/microsoft-copilot-pc/portrait-new-york-600.webp 600w, /work/microsoft-copilot-pc/portrait-new-york.webp 1200w" sizes="(max-width: 660px) calc(100vw - 40px), (max-width: 900px) calc((100vw - 107px) / 3), 265px" width="1200" height="1500" loading="lazy" decoding="async" alt="Portrait from the New York shoot: a woman in a mint knit polo, lit by warm window light falling across a pink wall." /></li>
+            <li><img src="/work/microsoft-copilot-pc/render-copilot-key.webp" srcset="/work/microsoft-copilot-pc/render-copilot-key-600.webp 600w, /work/microsoft-copilot-pc/render-copilot-key.webp 1200w" sizes="(max-width: 660px) calc(100vw - 40px), (max-width: 900px) calc((100vw - 107px) / 3), 265px" width="1200" height="1500" loading="lazy" decoding="async" alt="CG render: a laptop keyboard with a beam of warm light crossing the Copilot key." /></li>
+            <li><img src="/work/microsoft-copilot-pc/retail-display.webp" srcset="/work/microsoft-copilot-pc/retail-display-600.webp 600w, /work/microsoft-copilot-pc/retail-display.webp 1200w" sizes="(max-width: 660px) calc(100vw - 40px), (max-width: 900px) calc((100vw - 107px) / 3), 265px" width="1200" height="1500" loading="lazy" decoding="async" alt="Retail display in a shop window: a tall screen introducing the Copilot key, with Surface devices on plinths." /></li>
           </ul>
       </div>
     </section>
