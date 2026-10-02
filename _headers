@@ -13,7 +13,8 @@
   Referrer-Policy: strict-origin-when-cross-origin
   ! Access-Control-Allow-Origin
 
-# The email signature page: inline styles are inherent to it, and it uses Google Fonts
+# The email signature page: inline styles are inherent to it, it uses Google Fonts, and its image is an absolute
+# russellgreene.com URL (email clients need one), which isn't 'self' on preview deploys
 /sig/*
   ! Content-Security-Policy
-  Content-Security-Policy: default-src 'none'; script-src https://static.cloudflareinsights.com 'sha256-0ycr1rNK4sX6gpZHELsKvItsT7/tlaPnZagidRqfWas='; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self'; font-src https://fonts.gstatic.com; connect-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src https://static.cloudflareinsights.com 'sha256-0ycr1rNK4sX6gpZHELsKvItsT7/tlaPnZagidRqfWas='; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https://russellgreene.com; font-src https://fonts.gstatic.com; connect-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'
