@@ -331,7 +331,10 @@
       link.href = LINKEDIN;
       link.target = '_blank';
       link.rel = 'noopener';
-      link.textContent = 'LinkedIn ↗';
+      const arrow = document.createElement('span');
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '↗';
+      link.append('LinkedIn ', arrow);
       note.append('Mail is down. Reach Russell on ', link, ' instead.');
       actions(button('Back to form', () => showForm(form.querySelector('.btn-submit'))));
       note.focus();

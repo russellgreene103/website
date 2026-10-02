@@ -38,7 +38,7 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 - **Click effects:** a random pixel burst on mousedown (or a touch tap that doesn't scroll), never the same effect twice in a row. `makeClickEffects()` is shared by both.
 - **Work preview cards:** hovering a work row shows its image in a DOS frame that resolves through mosaic tiers (`drawMosaic()`). DOS preview windows serve the other row types. On touch, each row gets a lazy-loaded 64px thumbnail instead, which resolves through the same tiers the first time it scrolls into view, and tapping anywhere on a work or /vibe row opens its link.
 - **Terminal:** press backtick or click the prompt clock. On touch, a row of command keys (HELP, DIR, WHOAMI, COLOR, TIME) sits above the prompt at the bottom of the window, the overlay tracks `visualViewport` to stay above the keyboard, and the page behind is pinned (`html.term-locked`). Commands: HELP, DIR, OPEN, WHOAMI, CONTACT, LINKEDIN, VIBE, HOME, TIME, VER, COLOR (lists themes, or `COLOR RED` switches until reload), CLS, EXIT, WIN, FORMAT, and the secret `ROCKS` / `ROCKS.EXE`, which lazy-loads `rocks.js`. On touch, ROCKS scales to fit (not whole numbers), with thumb buttons under the screen upright or beside it sideways, plus EXIT and SND.
-- **DOS section labels** type themselves out as commands (`C:\> DIR WORK`); the **partner list** runs a menu selection bar once.
+- **DOS section labels** type themselves out as commands (`C:\> DIR WORK`); the **partner list** runs a menu selection bar once (the lit name takes `--pixel-text`, the same as hover; at rest the names are full ink).
 - **Expertise panel:** four skills, in order: Pitching & New Business (rocket, `PITCHING`), Team & Client Leadership (meeples, `LEADERSHIP`), Scope & Budget Strategy (tower, `SCOPE-BUDGET`), Global Production (globe, `PRODUCTION`). Each button's `data-dir` is its prompt name and `aria-controls` points at its no-JS `.expertise-detail` block, whose description and SEE links feed the panel; SEE links use the same URLs as the project's Selected Work row. Resting on, focusing, tapping or clicking (to pin) a skill types its description and related work into a DOS panel. On touch screens and at 660px or narrower (`.xp-inline`), the same panel opens inline under the tapped skill instead.
 - **Expertise icons:** four 24×24 pixel-art icons, `meeples`, `rocket`, `globe` and `tower` (`XP_ICON_DATA`, run-length encoded frames with their own `ms` and `rest`, drawn by `gridSvg` at 2px per cell into `[data-xp-icon]`; letters I ink, P/Q/S accent fill, highlight and shadow, D M L greys, W white). Each shows its `rest` frame when idle; with a mouse it loops while its skill is hovered, focused or pinned; inline (touch or narrow) it plays through once when tapped open. Only one ever moves, a hidden tab pauses it, and reduced motion keeps the rest frame. The frames are fixed art: never redraw them. The original handoff JSON lives in the test suite's `fixtures/`, not here.
 - **Name glitch:** every 2–5s, a few letters of the hero `<h1>` pixelate through canvas overlays. The heading text itself is never touched.
@@ -56,6 +56,16 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 - Touch-only styles and behaviour sit behind `(hover: none) and (pointer: coarse)` (the `TOUCH` constant in retro.js); small-screen layout sits behind `max-width: 660px`. Desktop must stay pixel-identical when changing either.
 - Honour `prefers-reduced-motion` everywhere: skip steps and animations and apply the final state instantly.
 - Screen reader text is preserved: effects are `aria-hidden` overlays or visually-hidden copies, and the real text stays intact. Everything works without JS (it stays blue and static).
+
+## Accessibility rules
+
+- Keep the landmarks: the menu bar in `<header>`, everything from the hero through contact in `<main id="main" tabindex="-1">`, the `<footer>` outside main.
+- Keep the skip link (`.skip-link`, a `.dos-button` reading SKIP TO CONTENT, named "Skip to content") as the first focusable element. It's invisible until focused and moves focus to `#main`.
+- Headings: the hero name is the only `h1`; the homepage section labels ("Core Expertise", "Selected Work", "Selected Partners", "Get in Touch") are `h2.section-label`, styled to look like small labels (the typing effect keeps one visually-hidden copy, so they're heard once); the contact headline is an `h3`.
+- Every work row's "View ↗" link carries a visually-hidden name: "View <project title> case study (opens in a new tab)". Add one for each new project.
+- A ↗ inside a link is always wrapped in `<span aria-hidden="true">`, in markup and in JS-built links.
+- The prompt clock's accessible name starts with its visible text (`C:\NYC> 7:27 AM, New York time. Open terminal`).
+- The hero fadeUp is off under `prefers-reduced-motion: reduce`.
 
 ## Fonts
 

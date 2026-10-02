@@ -335,9 +335,8 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 .dl-prompt { color: var(--pixel-text); }
 .dl-cmd { color: var(--ink); }
 
-/* Partner sequence: one name lit at a time, with hard cuts */
-.partners.is-sequencing .partner-name { transition: none; }
-.partner-name.is-lit { opacity: 1; }
+/* Partner sequence: one name lit at a time (the hover colour), with hard cuts */
+.partner-name.is-lit { color: var(--pixel-text); }
 
 /* Hidden DOS terminal */
 .dos-term-overlay {

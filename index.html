@@ -189,6 +189,26 @@
       margin-right: 24px;
     }
 
+    /* Skip link: the first Tab stop, invisible until focused, then a DOS button at the top left */
+    .skip-link {
+      position: absolute;
+      top: 12px;
+      left: 16px;
+      z-index: 10;
+    }
+    .skip-link:not(:focus) {
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+      box-shadow: none;
+    }
+    /* The skip link's target; it takes focus only from there, so no ring around the whole page */
+    #main:focus { outline: none; }
+
     .visually-hidden {
       position: absolute;
       width: 1px;
@@ -234,6 +254,7 @@
 
     .section-label {
       font-family: var(--mono);
+      font-weight: inherit; /* an <h2> on the homepage; it must look like the old <p> */
       font-size: 10px;
       letter-spacing: 0.14em;
       text-transform: uppercase;
@@ -330,6 +351,7 @@
     .work-item:first-child { border-top: 1px solid var(--rule); }
 
     .work-item:hover { background: rgba(14,14,14,0.03); }
+    .work-item:hover .work-client { color: var(--ink); } /* --mid falls under 4.5:1 on the hover fill */
 
     .work-title {
       font-family: var(--serif);
@@ -387,13 +409,11 @@
       font-size: 28px;
       font-weight: 300;
       color: var(--ink);
-      opacity: 0.22;
       padding: 6px 20px 6px 0;
-      transition: opacity 0.2s;
       cursor: default;
     }
 
-    .partner-name:hover { opacity: 1; }
+    .partner-name:hover { color: var(--pixel-text); }
 
     /* ── Contact ── */
     #contact {
@@ -407,7 +427,7 @@
       align-items: start;
     }
 
-    .contact-content h2 {
+    .contact-content h3 {
       font-family: var(--serif);
       font-size: clamp(36px, 5vw, 54px);
       font-weight: 300;
@@ -416,7 +436,7 @@
       letter-spacing: -0.01em;
     }
 
-    .contact-content h2 em { font-style: italic; }
+    .contact-content h3 em { font-style: italic; }
 
     .contact-content p {
       font-size: 17px;
@@ -567,6 +587,10 @@
     .hero-bio   { animation: fadeUp 0.7s ease both; animation-delay: 0.25s; }
     .hero-cta   { animation: fadeUp 0.7s ease both; animation-delay: 0.35s; }
 
+    @media (prefers-reduced-motion: reduce) {
+      .hero-meta, .hero h1, .hero-bio, .hero-cta { animation: none; }
+    }
+
     /* ── Mobile ── */
     @media (max-width: 660px) {
       .site-wrapper { padding: 0 20px; }
@@ -635,26 +659,33 @@
       .work-item:hover { background: none; }
       .work-item:active { background: rgba(14,14,14,0.05); }
       .work-item:hover .work-link { color: var(--mid); border-bottom-color: transparent; }
-      .partner-name:hover { opacity: 0.22; }
+      .work-item:hover .work-client { color: var(--mid); }
+      .partner-name:hover { color: var(--ink); }
       .form-row input,
       .form-submit .dos-button { min-height: 44px; }
     }
   </style>
-  <link rel="stylesheet" href="/retro.css?v=a4685e62" />
+  <link rel="stylesheet" href="/retro.css?v=66d8c8dd" />
 </head>
 <body>
+
+<a class="skip-link dos-button" href="#main" aria-label="Skip to content"><span class="dos-button-label">Skip to content</span></a>
 
 <div class="site-wrapper">
 
   <!-- Menu bar -->
+  <header>
   <nav class="menubar" aria-label="Menu">
     <ul class="menu">
       <li><a class="menu-item" href="#work"><span class="menu-key">W</span>ork</a></li>
       <li><a class="menu-item" href="#contact"><span class="menu-key">C</span>ontact</a></li>
-      <li><a class="menu-item" href="https://www.linkedin.com/in/russellgreene/" target="_blank" rel="noopener"><span class="menu-key">L</span>inkedIn ↗</a></li>
+      <li><a class="menu-item" href="https://www.linkedin.com/in/russellgreene/" target="_blank" rel="noopener"><span class="menu-key">L</span>inkedIn <span aria-hidden="true">↗</span></a></li>
     </ul>
     <span class="prompt-clock">NYC</span>
   </nav>
+  </header>
+
+  <main id="main" tabindex="-1">
 
   <!-- Hero -->
   <section class="hero">
@@ -676,7 +707,7 @@
 
   <!-- Expertise -->
   <section class="expertise">
-    <p class="section-label">Core<br />Expertise</p>
+    <h2 class="section-label">Core<br />Expertise</h2>
     <div class="expertise-body">
       <ul class="expertise-list">
         <li>
@@ -732,7 +763,7 @@
   <!-- Work -->
   <section id="work">
     <div class="work-header">
-      <p class="section-label">Selected<br />Work</p>
+      <h2 class="section-label">Selected<br />Work</h2>
       <ul class="work-list" id="work-list">
 
         <li class="work-item" data-media="/work-media/eventbrite.webp">
@@ -740,7 +771,7 @@
             <span class="work-title">Eventbrite Rebrand</span>
             <span class="work-client">Eventbrite</span>
           </div>
-          <a href="https://buck.co/work/eventbrite" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/eventbrite" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Eventbrite Rebrand case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/jpmorgan-payments.webp">
@@ -748,7 +779,7 @@
             <span class="work-title">Payments Rebrand</span>
             <span class="work-client">J.P. Morgan</span>
           </div>
-          <a href="https://buck.co/work/jpmorgan-payments" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/jpmorgan-payments" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Payments Rebrand case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/microsoft-copilot.webp">
@@ -756,7 +787,7 @@
             <span class="work-title">Copilot+ PC Product Launch</span>
             <span class="work-client">Microsoft</span>
           </div>
-          <a href="https://buck.co/work/microsoft-copilot-pcs" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/microsoft-copilot-pcs" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Copilot+ PC Product Launch case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/cash-app-visual-system.webp">
@@ -764,7 +795,7 @@
             <span class="work-title">Brand Visual System</span>
             <span class="work-client">Cash App</span>
           </div>
-          <a href="https://buck.co/work/cash-app-visual-identity" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/cash-app-visual-identity" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Brand Visual System case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/microsoft-mesh.webp">
@@ -772,7 +803,7 @@
             <span class="work-title">Mesh VR Platform</span>
             <span class="work-client">Microsoft</span>
           </div>
-          <a href="https://buck.co/work/microsoft-mesh" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/microsoft-mesh" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Mesh VR Platform case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/kurzgesagt.webp">
@@ -780,7 +811,7 @@
             <span class="work-title">Website Design</span>
             <span class="work-client">Kurzgesagt</span>
           </div>
-          <a href="https://buck.co/work/kurzgesagt" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/kurzgesagt" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Website Design case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/pepsi-crave.webp">
@@ -788,7 +819,7 @@
             <span class="work-title">Crave Brand Assets</span>
             <span class="work-client">Pepsi</span>
           </div>
-          <a href="https://buck.co/work/pepsi-crave" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/pepsi-crave" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Crave Brand Assets case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/microsoft-azure.webp">
@@ -796,7 +827,7 @@
             <span class="work-title">Azure AI Campaign</span>
             <span class="work-client">Microsoft</span>
           </div>
-          <a href="https://buck.co/work/microsoft-azure" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/microsoft-azure" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Azure AI Campaign case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/cash-app-illustrations.webp">
@@ -804,7 +835,7 @@
             <span class="work-title">Product Illustrations</span>
             <span class="work-client">Cash App</span>
           </div>
-          <a href="https://buck.co/work/cash-app-illustration-system" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/cash-app-illustration-system" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Product Illustrations case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/microsoft-surface.webp">
@@ -812,7 +843,7 @@
             <span class="work-title">Surface Pro 9 Campaign</span>
             <span class="work-client">Microsoft</span>
           </div>
-          <a href="https://buck.co/work/microsoft-surface" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/microsoft-surface" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Surface Pro 9 Campaign case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/microsoft-intel.webp">
@@ -820,7 +851,7 @@
             <span class="work-title">Windows Campaign</span>
             <span class="work-client">Microsoft + Intel</span>
           </div>
-          <a href="https://buck.co/work/microsoft-intel-global-b2b-campaign" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/microsoft-intel-global-b2b-campaign" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Windows Campaign case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/google-pixel-4a.webp">
@@ -828,7 +859,7 @@
             <span class="work-title">Pixel 4a Campaign</span>
             <span class="work-client">Google</span>
           </div>
-          <a href="https://buck.co/work/google-pixel-4a" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/google-pixel-4a" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Pixel 4a Campaign case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/spotify-premium.webp">
@@ -836,7 +867,7 @@
             <span class="work-title">Premium Campaign</span>
             <span class="work-client">Spotify</span>
           </div>
-          <a href="https://buck.co/work/spotify-premium" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/spotify-premium" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Premium Campaign case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/squarespace-snow-white.webp">
@@ -844,7 +875,7 @@
             <span class="work-title">Snow White Campaign</span>
             <span class="work-client">Squarespace</span>
           </div>
-          <a href="https://buck.co/work/sqsp-snow-white" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/sqsp-snow-white" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Snow White Campaign case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/squarespace-dracula.webp">
@@ -852,7 +883,7 @@
             <span class="work-title">Dracula Campaign</span>
             <span class="work-client">Squarespace</span>
           </div>
-          <a href="https://buck.co/work/sqsp-dracula" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/sqsp-dracula" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Dracula Campaign case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/joji-777.webp">
@@ -860,7 +891,7 @@
             <span class="work-title">777 Music Video</span>
             <span class="work-client">Joji</span>
           </div>
-          <a href="https://pompandclout.com/project/joji-777/" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://pompandclout.com/project/joji-777/" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> 777 Music Video case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/cash-app-taxes.webp">
@@ -868,7 +899,7 @@
             <span class="work-title">Taxes Campaign</span>
             <span class="work-client">Cash App</span>
           </div>
-          <a href="https://buck.co/work/cash-app-taxes" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/cash-app-taxes" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Taxes Campaign case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/spotify-singles.webp">
@@ -876,7 +907,7 @@
             <span class="work-title">Singles Music Video</span>
             <span class="work-client">Spotify</span>
           </div>
-          <a href="https://buck.co/work/spotify-aapi-heritage-month" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/spotify-aapi-heritage-month" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Singles Music Video case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
         <li class="work-item" data-media="/work-media/square-restaurants.webp">
@@ -884,7 +915,7 @@
             <span class="work-title">Restaurants Anthem Film</span>
             <span class="work-client">Square</span>
           </div>
-          <a href="https://buck.co/work/square-restaurant-anthem" target="_blank" rel="noopener" class="work-link">View ↗</a>
+          <a href="https://buck.co/work/square-restaurant-anthem" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Restaurants Anthem Film case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
       </ul>
@@ -907,7 +938,7 @@
 
   <!-- Partners -->
   <section class="partners">
-    <p class="section-label">Selected<br />Partners</p>
+    <h2 class="section-label">Selected<br />Partners</h2>
     <div class="partner-grid">
       <span class="partner-name">Eventbrite</span>
       <span class="partner-name">Google</span>
@@ -927,9 +958,9 @@
   <!-- Contact -->
   <section id="contact">
     <div class="contact-inner">
-      <p class="section-label">Get in<br />Touch</p>
+      <h2 class="section-label">Get in<br />Touch</h2>
       <div class="contact-content">
-        <h2>Let's make<br /><em>something</em><br />together.</h2>
+        <h3>Let's make<br /><em>something</em><br />together.</h3>
         <p>For new projects, pitches and partnerships, or just to talk production.</p>
         <div class="compose" id="compose">
           <div class="compose-title" aria-hidden="true"><span>[■]</span><span class="compose-title-text">New message</span></div>
@@ -951,10 +982,12 @@
             </div>
           </form>
         </div>
-        <p class="contact-alt">Or find me on <a href="https://www.linkedin.com/in/russellgreene/" target="_blank" rel="noopener">LinkedIn ↗</a></p>
+        <p class="contact-alt">Or find me on <a href="https://www.linkedin.com/in/russellgreene/" target="_blank" rel="noopener">LinkedIn <span aria-hidden="true">↗</span></a></p>
       </div>
     </div>
   </section>
+
+  </main>
 
   <!-- Footer -->
   <footer>
@@ -968,8 +1001,8 @@
 
 </div>
 
-<script src="/retro.js?v=0b5449f2"></script>
-<script src="/contact.js?v=1ab35bea"></script>
+<script src="/retro.js?v=9b852e21"></script>
+<script src="/contact.js?v=41f6ff3f"></script>
 
 </body>
 </html>

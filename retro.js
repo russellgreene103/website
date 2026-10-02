@@ -1850,7 +1850,8 @@ feature('Prompt clock', function () {
   function tick() {
     const now = new Date();
     time.textContent = fmt.format(now);
-    clock.setAttribute('aria-label', `New York, ${fmt.format(now)}. Open terminal`);
+    // The name starts with the visible text (voice control users say what they see), then says what it does
+    clock.setAttribute('aria-label', `C:\\NYC> ${fmt.format(now)}, New York time. Open terminal`);
     setTimeout(tick, 60000 - (now.getTime() % 60000) + 50); // just after the next minute
   }
   tick();
