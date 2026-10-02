@@ -172,9 +172,7 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 @media (prefers-reduced-motion: reduce) {
   html.cursor-link .pixel-hand,
   .dos-window.is-open,
-  .dos-window.is-closing,
-  .work-card.is-open,
-  .work-card.is-closing { animation: none; }
+  .dos-window.is-closing { animation: none; }
 }
 
 /* Dithered DOS layer drawn over the photo by JS; cleared cells let the real photo through */
@@ -554,6 +552,12 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
 .work-card.is-closing { display: block; }
 .work-card.is-open { animation: dos-open 120ms steps(1, end) both; }
 .work-card.is-closing { animation: dos-close 120ms steps(1, end) both; }
+
+/* After the rules above, or they'd win: reduced motion opens and closes the card instantly */
+@media (prefers-reduced-motion: reduce) {
+  .work-card.is-open,
+  .work-card.is-closing { animation: none; }
+}
 
 .work-card-bar {
   display: flex;

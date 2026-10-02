@@ -546,7 +546,6 @@ feature('Pixel cursor', function () {
   }
 
   let mx = 0, my = 0, lastX = 0, lastY = 0, travel = 0, nextBit = 0;
-  let anchor = null; // where the card hangs when keyboard focus opened it (the pointer takes over when it moves)
   let seen = false, overField = false;
 
   // Row previews that follow the pointer: work rows get a media card, /vibe project rows get a
@@ -655,10 +654,9 @@ feature('Pixel cursor', function () {
 
   // 20px right and 16px below the pointer, flipping left or up at the viewport edges
   function followPos(w, h) {
-    const px = anchor ? anchor.x : mx, py = anchor ? anchor.y : my;
-    const flipX = px + 20 + w + 6 > innerWidth;
-    const flipY = py + 16 + h + 6 > innerHeight;
-    return { x: Math.round(flipX ? px - 20 - w : px + 20), y: Math.round(flipY ? py - 16 - h : py + 16), flipX, flipY };
+    const flipX = mx + 20 + w + 6 > innerWidth;
+    const flipY = my + 16 + h + 6 > innerHeight;
+    return { x: Math.round(flipX ? mx - 20 - w : mx + 20), y: Math.round(flipY ? my - 16 - h : my + 16), flipX, flipY };
   }
 
   function follow(el, w, h) {
@@ -748,7 +746,7 @@ feature('Pixel cursor', function () {
   }
 
   // The featured row's entrance: when the card opens onto it from closed (the pointer arriving from
-  // outside the list, or keyboard focus), three ink outlines step from its thumbnail to where the
+  // outside the list), three ink outlines step from its thumbnail to where the
   // card will sit, 50ms apart, then the card opens as usual. Row to row, the open card just swaps.
   const ZOOM_STEPS = [1 / 3, 2 / 3, 1], ZOOM_MS = 50;
   const zoomBoxes = [];
@@ -877,7 +875,6 @@ feature('Pixel cursor', function () {
     if (e.pointerType === 'touch') return;
     mx = e.clientX;
     my = e.clientY;
-    anchor = null;
     cursor.style.translate = `${Math.round(mx)}px ${Math.round(my)}px`;
     root.classList.add('cursor-visible');
     setState(e.target);
@@ -902,26 +899,8 @@ feature('Pixel cursor', function () {
 
   // Content moves under a still pointer while scrolling
   window.addEventListener('scroll', () => {
-    if (seen && !anchor) setState(document.elementFromPoint(mx, my));
+    if (seen) setState(document.elementFromPoint(mx, my));
   }, { passive: true });
-
-  // Keyboard: focus landing on the featured row's link opens its card (with the entrance), hung off the
-  // thumbnail; like every other row, no card follows focus anywhere else
-  document.addEventListener('focusin', e => {
-    const row = e.target.closest && e.target.closest('.work-item.is-featured');
-    if (row && e.target.matches('.work-link:focus-visible')) {
-      if (cardRow || zoomRow) return; // the pointer already has it open
-      const r = row.querySelector('.work-feature').getBoundingClientRect();
-      anchor = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-      showCard(row);
-    } else if (anchor) {
-      anchor = null;
-      showCard(null);
-    }
-  });
-  document.addEventListener('focusout', e => {
-    if (anchor && !e.relatedTarget) { anchor = null; showCard(null); }
-  });
 
   document.addEventListener('mouseout', e => {
     if (e.relatedTarget) return;
