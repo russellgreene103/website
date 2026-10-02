@@ -16,6 +16,13 @@ const textOf = (el, sel) => el.querySelector(sel).textContent.trim();
 
 const LINKEDIN_URL = 'https://www.linkedin.com/in/russellgreene/';
 
+// Same-site links (case studies) open in this tab; everything else opens in a new one
+function openLink(href) {
+  const url = new URL(href, location.href);
+  if (url.origin === location.origin) location.assign(url.href);
+  else window.open(url.href, '_blank', 'noopener');
+}
+
 // Phones and tablets: taps instead of hover (desktop never matches this)
 const TOUCH = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 
@@ -915,7 +922,7 @@ feature('Pixel cursor', function () {
     const row = e.target.closest(ROW_SELECTOR);
     if (!row || e.target.closest('a')) return;
     const link = row.querySelector(rowType(row).link);
-    if (link) window.open(link.href, '_blank', 'noopener');
+    if (link) openLink(link.href);
   });
 
   const clickFx = makeClickEffects();
@@ -1687,6 +1694,7 @@ const retroTerminal = feature('Terminal', function () {
       return { dir: 'C:\\WORK', ext: 'PRJ', items: work.map(r => ({ title: textOf(r, '.work-title'), href: r.querySelector('.work-link').href })) };
     }
     const vibe = [...document.querySelectorAll('.project-item')];
+    if (!vibe.length) return { dir: null, items: [] };
     return { dir: 'C:\\VIBE', ext: 'EXE', items: vibe.map(r => ({ title: projectName(r), href: r.querySelector('.project-link').href })) };
   }
 
@@ -1730,6 +1738,7 @@ const retroTerminal = feature('Terminal', function () {
   function dir() {
     const list = listing();
     if (!list) { print('Access denied'); return; }
+    if (!list.items.length) { print('File not found'); return; }
     const names = shortNames(list.items);
     const entries = list.items.map((item, i) => dirEntry(String(i + 1), names[i], list.ext, item.title));
     // The easter egg's clue: listed last, with no number, so OPEN N never reaches it
@@ -1745,7 +1754,7 @@ const retroTerminal = feature('Terminal', function () {
     const item = list.items[parseInt(arg, 10) - 1];
     if (!item) { print('File not found'); return; }
     print(`Opening ${item.title}...`);
-    window.open(item.href, '_blank', 'noopener');
+    openLink(item.href);
   }
 
   function time() {
@@ -2025,11 +2034,11 @@ feature('Section labels', function () {
     const visual = el('span', 'dos-label');
     visual.setAttribute('aria-hidden', 'true');
     const cmd = el('span', 'dl-cmd');
-    visual.append(el('span', 'dl-prompt', 'C:\\>'), ' ', cmd);
+    visual.append(el('span', 'dl-prompt', label.dataset.prompt || 'C:\\>'), ' ', cmd);
     label.textContent = '';
     label.append(el('span', 'dl-sr', plain), visual);
     label.classList.add('has-dos-label');
-    return { visual, cmd, text: COMMANDS[plain.toLowerCase()] || plain.toUpperCase() };
+    return { visual, cmd, text: label.dataset.command || COMMANDS[plain.toLowerCase()] || plain.toUpperCase() };
   }
 
   function type({ visual, cmd, text }) {
@@ -2517,4 +2526,49 @@ feature('Work list', function () {
     reveal();
     timer = setInterval(reveal, ROW_MS);
   });
+});
+
+// Case-study hero loop: muted, and it plays only while it's on screen. Nothing is fetched until then
+// (preload="none"). Reduced motion never autoplays: the poster shows and the button plays it on request.
+// The button pauses and plays it (and remembers that choice while the page is open).
+feature('Case video', function () {
+  const video = document.querySelector('.case-video');
+  const button = document.querySelector('.case-video-toggle');
+  if (!video || !button) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const label = button.querySelector('.dos-button-label');
+  let wanted = !reduceMotion.matches, inView = false;
+
+  function render() {
+    button.setAttribute('aria-label', wanted ? 'Pause animation' : 'Play animation');
+    label.textContent = wanted ? 'Pause' : 'Play';
+  }
+
+  function sync() {
+    if (wanted && inView) {
+      const p = video.play();
+      if (p && p.catch) p.catch(() => { wanted = false; render(); }); // autoplay refused: offer the button
+    } else if (!video.paused) video.pause();
+  }
+
+  button.addEventListener('click', () => {
+    wanted = !wanted;
+    render();
+    sync();
+  });
+  reduceMotion.addEventListener('change', () => {
+    if (reduceMotion.matches) { wanted = false; render(); sync(); }
+  });
+
+  if (!('IntersectionObserver' in window)) {
+    inView = true;
+  } else {
+    new IntersectionObserver(entries => {
+      inView = entries.some(e => e.isIntersecting);
+      sync();
+    }, { threshold: 0.25 }).observe(video);
+  }
+  render();
+  button.hidden = false;
+  sync();
 });

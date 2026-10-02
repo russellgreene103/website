@@ -293,6 +293,11 @@ html.cursor-wait .pixel-hourglass svg:nth-child(4) { animation-delay: -0.25s; }
   .prompt-prefix { display: none; }
 }
 
+/* A four-item bar (Home, Work, Contact, LinkedIn: case studies) needs the room sooner */
+@media (max-width: 419px) {
+  .menubar-long .prompt-prefix { display: none; }
+}
+
 /* Touch: 44px tap areas that don't move the layout */
 @media (hover: none) and (pointer: coarse) {
   .menu-item::after {
