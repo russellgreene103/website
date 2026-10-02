@@ -388,6 +388,62 @@
       border-bottom-color: var(--ink);
     }
 
+    /* Featured project (set up by the script after the list): its image in a DOS frame at the left,
+       a tag above the title. On phones and touch screens the image runs full width above it. */
+    #work-list .work-item.is-featured {
+      grid-template-columns: 168px 1fr auto;
+      column-gap: 20px;
+      align-items: center;
+    }
+
+    .work-feature {
+      position: relative;
+      display: block;
+      aspect-ratio: 16 / 10;
+      overflow: hidden;
+      background: var(--pixel);
+      border: 1px solid var(--ink);
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+
+    .work-feature img,
+    .work-feature canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .work-feature img { object-fit: cover; }
+    .work-feature img:not([src]):not([srcset]) { visibility: hidden; }
+    .work-feature canvas { image-rendering: pixelated; background: var(--pixel); }
+    .work-feature canvas[hidden] { display: none; }
+
+    .work-tag {
+      display: block;
+      width: max-content;
+      margin-bottom: 6px;
+      padding: 3px 5px;
+      background: var(--pixel);
+      color: var(--on-pixel);
+      font-family: 'Silkscreen', var(--mono);
+      font-size: 9px;
+      line-height: 1;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 660px), (hover: none) and (pointer: coarse) {
+      #work-list .work-item.is-featured {
+        grid-template-columns: 1fr auto;
+      }
+
+      .work-feature {
+        grid-column: 1 / -1;
+        margin: 2px 3px 18px 0;
+      }
+    }
+
     /* ── Partners ── */
     .partners {
       padding: 64px 0;
@@ -766,7 +822,7 @@
       <h2 class="section-label">Selected<br />Work</h2>
       <ul class="work-list" id="work-list">
 
-        <li class="work-item" data-media="/work-media/eventbrite.webp">
+        <li class="work-item" data-media="/work-media/eventbrite.webp" data-featured>
           <div>
             <span class="work-title">Eventbrite Rebrand</span>
             <span class="work-client">Eventbrite</span>
@@ -774,7 +830,7 @@
           <a href="https://buck.co/work/eventbrite" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Eventbrite Rebrand case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
-        <li class="work-item" data-media="/work-media/jpmorgan-payments.webp">
+        <li class="work-item" data-media="/work-media/jpmorgan-payments.webp" data-featured>
           <div>
             <span class="work-title">Payments Rebrand</span>
             <span class="work-client">J.P. Morgan</span>
@@ -782,7 +838,7 @@
           <a href="https://buck.co/work/jpmorgan-payments" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Payments Rebrand case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
-        <li class="work-item" data-media="/work-media/microsoft-copilot.webp">
+        <li class="work-item" data-media="/work-media/microsoft-copilot.webp" data-featured>
           <div>
             <span class="work-title">Copilot+ PC Product Launch</span>
             <span class="work-client">Microsoft</span>
@@ -790,7 +846,7 @@
           <a href="https://buck.co/work/microsoft-copilot-pcs" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Copilot+ PC Product Launch case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
-        <li class="work-item" data-media="/work-media/cash-app-visual-system.webp">
+        <li class="work-item" data-media="/work-media/cash-app-visual-system.webp" data-featured>
           <div>
             <span class="work-title">Brand Visual System</span>
             <span class="work-client">Cash App</span>
@@ -862,7 +918,7 @@
           <a href="https://buck.co/work/google-pixel-4a" target="_blank" rel="noopener" class="work-link">View<span class="visually-hidden"> Pixel 4a Campaign case study (opens in a new tab)</span> <span aria-hidden="true">↗</span></a>
         </li>
 
-        <li class="work-item" data-media="/work-media/spotify-premium.webp">
+        <li class="work-item" data-media="/work-media/spotify-premium.webp" data-featured>
           <div>
             <span class="work-title">Premium Campaign</span>
             <span class="work-client">Spotify</span>
@@ -923,14 +979,46 @@
         // A fresh order on every visit: shuffle the rows (Fisher–Yates) as soon as they're parsed, before
         // the list first paints, so nothing jumps. ?order=fixed keeps the markup order (for testing);
         // without JS the list stays in markup order too.
+        // Then one [data-featured] row, at random, moves to the top as the featured project, with its
+        // tag and an empty image frame (retro.js loads the image as Selected Work nears the screen).
+        // ?order=fixed features the first one in markup order; ?featured=N (1-based) forces one.
         (function (list) {
-          if (new URLSearchParams(location.search).get('order') === 'fixed') return;
-          var rows = Array.prototype.slice.call(list.children);
-          for (var i = rows.length - 1; i > 0; i--) {
-            var j = Math.floor(Math.random() * (i + 1));
-            var t = rows[i]; rows[i] = rows[j]; rows[j] = t;
+          var params = new URLSearchParams(location.search);
+          var fixed = params.get('order') === 'fixed';
+          var pool = list.querySelectorAll('.work-item[data-featured]');
+          if (!fixed) {
+            var rows = Array.prototype.slice.call(list.children);
+            for (var i = rows.length - 1; i > 0; i--) {
+              var j = Math.floor(Math.random() * (i + 1));
+              var t = rows[i]; rows[i] = rows[j]; rows[j] = t;
+            }
+            rows.forEach(function (row) { list.appendChild(row); });
           }
-          rows.forEach(function (row) { list.appendChild(row); });
+          if (!pool.length) return;
+          var row = pool[parseInt(params.get('featured'), 10) - 1] ||
+            pool[fixed ? 0 : Math.floor(Math.random() * pool.length)];
+          var media = row.dataset.media;
+          list.insertBefore(row, list.firstElementChild);
+          row.classList.add('is-featured');
+          var tag = document.createElement('span');
+          tag.className = 'work-tag';
+          tag.textContent = 'Featured';
+          var title = row.querySelector('.work-title');
+          title.parentNode.insertBefore(tag, title);
+          var frame = document.createElement('span');
+          frame.className = 'work-feature';
+          frame.setAttribute('aria-hidden', 'true');
+          var img = document.createElement('img');
+          img.alt = '';
+          img.decoding = 'async';
+          img.sizes = '(max-width: 660px) calc(100vw - 40px), (hover: none) and (pointer: coarse) 720px, 168px';
+          img.dataset.srcset = media + ' 640w, ' + media.replace(/\.webp$/, '-1080.webp') + ' 1080w';
+          frame.appendChild(img);
+          row.insertBefore(frame, row.firstChild);
+          // If retro.js never claims the frame, show the image plainly once the page has loaded
+          addEventListener('load', function () {
+            if (!frame.dataset.claimed) img.srcset = img.dataset.srcset;
+          });
         })(document.getElementById('work-list'));
       </script>
     </div>
@@ -1001,7 +1089,7 @@
 
 </div>
 
-<script src="/retro.js?v=9b852e21"></script>
+<script src="/retro.js?v=b6a9205c"></script>
 <script src="/contact.js?v=41f6ff3f"></script>
 
 </body>

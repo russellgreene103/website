@@ -802,9 +802,10 @@ feature('Pixel cursor', function () {
     overField = !!field;
     root.classList.toggle('cursor-over-field', overField);
     root.classList.toggle('cursor-link', !!link);
-    const usesCard = !!row && !!rowType(row).card;
-    showCard(usesCard ? row : null);
-    showWindow(row && !usesCard ? row : null);
+    const type = row && rowType(row);
+    // The featured work row already shows its image, so it gets no card
+    showCard(type && type.card && !row.classList.contains('is-featured') ? row : null);
+    showWindow(type && !type.card ? row : null);
   }
 
   document.addEventListener('pointermove', e => {
@@ -900,7 +901,7 @@ feature('Touch taps', function () {
 // tiers as the desktop preview card (16px, 8px, 4px, then the real image).
 feature('Work thumbnails', function () {
   const list = document.getElementById('work-list');
-  const rows = list ? [...list.querySelectorAll('.work-item[data-media]')] : [];
+  const rows = list ? [...list.querySelectorAll('.work-item[data-media]:not(.is-featured)')] : [];
   if (!TOUCH || !rows.length || !('IntersectionObserver' in window)) return;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const SIZE = 64, TIERS = [16, 8, 4], STEP_MS = 110;
@@ -961,6 +962,65 @@ feature('Work thumbnails', function () {
     }
   }, { threshold: 0.6 });
   rows.forEach(row => { near.observe(row); seen.observe(row); });
+});
+
+// Featured work: the inline script after the list moved one project to the top and gave it an empty
+// image frame. Its image loads as the row nears the screen (the 1080px copy on phones, through srcset),
+// and the first time the frame is mostly in view it resolves through the mosaic tiers, then stays.
+feature('Featured work', function () {
+  const frame = document.querySelector('#work-list .work-feature');
+  if (!frame) return;
+  frame.dataset.claimed = 'true';
+  const img = frame.querySelector('img');
+  const load = () => { if (!img.getAttribute('srcset')) img.srcset = img.dataset.srcset; };
+  if (!('IntersectionObserver' in window)) { load(); return; }
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const TIERS = [16, 8, 4], STEP_MS = 110;
+
+  // A cobalt cover until the reveal (reduced motion: none, the image just appears)
+  const canvas = document.createElement('canvas');
+  canvas.hidden = reduceMotion.matches;
+  frame.append(canvas);
+
+  function reveal() {
+    load();
+    if (reduceMotion.matches) { canvas.hidden = true; return; }
+    const resolve = () => {
+      if (!img.naturalWidth) return; // no image: the cobalt frame stays
+      // With srcset, naturalWidth is scaled by the chosen density, so the mosaic samples a plain
+      // copy of the same file (already cached), whose sizes are its real pixels
+      const src = new Image();
+      src.src = img.currentSrc;
+      src.decode().then(() => run(src), () => { canvas.hidden = true; });
+    };
+    const run = src => {
+      canvas.width = frame.clientWidth;
+      canvas.height = frame.clientHeight;
+      let k = 0;
+      const step = () => {
+        if (k < TIERS.length) {
+          drawMosaic(canvas, src, TIERS[k++]);
+          setTimeout(step, STEP_MS);
+        } else canvas.hidden = true;
+      };
+      step();
+    };
+    if (img.complete && img.naturalWidth) resolve();
+    else img.addEventListener('load', resolve, { once: true });
+  }
+
+  const near = new IntersectionObserver(entries => {
+    if (!entries.some(e => e.isIntersecting)) return;
+    near.disconnect();
+    load();
+  }, { rootMargin: '300px 0px' });
+  const seen = new IntersectionObserver(entries => {
+    if (!entries.some(e => e.isIntersecting)) return;
+    seen.disconnect();
+    reveal();
+  }, { threshold: 0.6 });
+  near.observe(frame);
+  seen.observe(frame);
 });
 
 // Retro headshot — the photo is DOS-dithered onto a canvas above it. On hover the whole image
