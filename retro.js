@@ -2529,8 +2529,9 @@ feature('Work list', function () {
 });
 
 // Case-study hero loop: muted, and it plays only while it's on screen. Nothing is fetched until then
-// (preload="none"). Reduced motion never autoplays: the poster shows and the button plays it on request.
-// The button pauses and plays it (and remembers that choice while the page is open).
+// (preload="none"). Reduced motion never autoplays: the poster picture shows and the button plays it on request.
+// The button pauses and plays it (and remembers that choice while the page is open). The video lies over the
+// poster picture, transparent until a frame of it has been painted, so the poster never blinks to black.
 feature('Case video', function () {
   const video = document.querySelector('.case-video');
   const button = document.querySelector('.case-video-toggle');
@@ -2538,6 +2539,14 @@ feature('Case video', function () {
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const label = button.querySelector('.dos-button-label');
   let wanted = !reduceMotion.matches, inView = false;
+
+  // Show the video once a frame of it is on screen (its first frame is the poster, so the swap is invisible)
+  const reveal = () => video.classList.add('has-frame');
+  video.addEventListener('playing', () => {
+    if (video.classList.contains('has-frame')) return;
+    if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(reveal);
+    else video.addEventListener('timeupdate', reveal, { once: true });
+  });
 
   function render() {
     button.setAttribute('aria-label', wanted ? 'Pause animation' : 'Play animation');
