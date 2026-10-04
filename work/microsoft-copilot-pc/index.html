@@ -268,6 +268,15 @@
     }
     .case-video-toggle[hidden] { display: none; }
 
+    /* Mirror copies of the motion control: one over the PROTECT frame (as above), one in a row under the grid */
+    .case-motion-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+    .case-motion-row .case-video-toggle-inline { position: static; }
+    .case-motion-row:has(> [hidden]) { display: none; } /* no JS, no button: no empty row */
+
     /* ── Sections: the homepage's label column ── */
     .case-section {
       display: grid;
@@ -468,7 +477,8 @@
 
     <!-- Hero loop: decorative. The picture is the loop's first frame (and the LCP); the video sits on top, invisible
          until retro.js has a frame of it on screen, and plays only in view (never under reduced motion).
-         Its button is the page-wide motion control: it pauses and plays every loop on the page -->
+         Its button is the page-wide motion control: it pauses and plays every loop on the page. Two mirror copies
+         (over the PROTECT loop, under the DIR ASSETS grid) share its state -->
     <div class="case-hero-media">
       <picture class="case-poster">
         <source srcset="/work/microsoft-copilot-pc/hero-poster-720.webp" type="image/webp" media="(max-width: 660px)" width="720" height="406" />
@@ -506,7 +516,7 @@
           <li><img src="/work/microsoft-copilot-pc/role-window-1200.webp" srcset="/work/microsoft-copilot-pc/role-window-600.webp 600w, /work/microsoft-copilot-pc/role-window-1200.webp 1200w" sizes="(max-width: 660px) calc(100vw - 40px), (max-width: 900px) calc((100vw - 107px) / 3), 265px" width="1200" height="1500" loading="lazy" decoding="async" alt="Portrait from the New York shoot: a woman in a mint knit polo, lit by warm window light falling across a pink wall." /></li>
           <li><img src="/work/microsoft-copilot-pc/role-table-1200.webp" srcset="/work/microsoft-copilot-pc/role-table-600.webp 600w, /work/microsoft-copilot-pc/role-table-1200.webp 1200w" sizes="(max-width: 660px) calc(100vw - 40px), (max-width: 900px) calc((100vw - 107px) / 3), 265px" width="1200" height="1500" loading="lazy" decoding="async" alt="From the New York shoot: a woman at a round table opening a Surface Laptop in warm window light, a glass of orange juice beside it." /></li>
         </ul>
-        <figcaption class="case-caption">Portraits from the New York photo and video shoot.</figcaption>
+        <figcaption class="case-caption">Portraits and lifestyle from the New York photo and video shoot.</figcaption>
       </figure>
     </section>
 
@@ -557,6 +567,7 @@
               <video class="case-video" muted loop playsinline preload="none" width="480" height="480" aria-hidden="true"><source src="/work/microsoft-copilot-pc/loop-prompts-480.mp4" type="video/mp4" /></video>
             </li>
         </ul>
+        <div class="case-motion-row"><button type="button" class="dos-button case-video-toggle case-video-toggle-inline" hidden><span class="dos-button-label">Pause animations</span></button></div>
         <figcaption class="case-caption">12 of the more than 100 assets: nine CG renders and three loops.</figcaption>
       </figure>
     </section>
@@ -576,6 +587,7 @@
             <source src="/work/microsoft-copilot-pc/light-sweep-720.mp4" type="video/mp4" media="(max-width: 660px)" />
             <source src="/work/microsoft-copilot-pc/light-sweep.mp4" type="video/mp4" />
           </video>
+          <button type="button" class="dos-button case-video-toggle" hidden><span class="dos-button-label">Pause animations</span></button>
         </div>
         <figcaption class="case-caption">The CG lighting as the hero: warm light across the keyboard.</figcaption>
       </figure>
@@ -584,7 +596,7 @@
     <section class="case-section" aria-labelledby="outcome-label">
       <h2 class="section-label" id="outcome-label" data-command="TYPE OUTCOME.TXT">Outcome</h2>
       <div class="case-body">
-          <p>Microsoft was thrilled, and we've since partnered with them on a number of product marketing campaigns. It was a landmark launch for the category and the brand, and two years on, the work is still in use. For me, that's the real test: work that lasts.</p>
+          <p>Microsoft was thrilled, and we've since partnered with them on a number of marketing campaigns. It was a landmark launch for the category and the brand, and two years on, the work is still in use. For me, that's the real test: work that lasts.</p>
       </div>
       <figure class="case-media">
         <div class="case-wide case-film">
@@ -622,7 +634,7 @@
 
 </div>
 
-<script src="/retro.js?v=5ba42ebc"></script>
+<script src="/retro.js?v=672857f1"></script>
 
 </body>
 </html>

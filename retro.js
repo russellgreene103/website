@@ -2531,8 +2531,9 @@ feature('Work list', function () {
 // Case-study loops (the hero and every other .case-video): muted, each playing only while at least a quarter of it
 // is on screen. Nothing is fetched until then (preload="none"). Each lies over its poster picture, transparent until
 // a frame of it has been painted, so the picture never blinks to black. The hero's button is the page-wide motion
-// control: it pauses or plays every loop, and the choice holds for the visit (sessionStorage). Reduced motion never
-// autoplays: every picture stays until the visitor presses Play.
+// control: it pauses or plays every loop, and the choice holds for the visit (sessionStorage). Mirror copies of it
+// (every .case-video-toggle) share that one state and label. Reduced motion never autoplays: every picture stays
+// until the visitor presses Play.
 // Films (.case-film-video) are the visitor's to start: never autoplayed, and starting one pauses any other.
 feature('Case video', function () {
   const films = [...document.querySelectorAll('.case-film-video')];
@@ -2552,10 +2553,9 @@ feature('Case video', function () {
   }, true);
 
   const videos = [...document.querySelectorAll('.case-video')];
-  const button = document.querySelector('.case-video-toggle');
-  if (!videos.length || !button) return;
+  const buttons = [...document.querySelectorAll('.case-video-toggle')];
+  if (!videos.length || !buttons.length) return;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const label = button.querySelector('.dos-button-label');
   const KEY = 'case-motion';
   const stored = (() => { try { return sessionStorage.getItem(KEY); } catch { return null; } })();
   let wanted = !reduceMotion.matches && stored !== 'paused';
@@ -2572,7 +2572,7 @@ feature('Case video', function () {
   });
 
   function render() {
-    label.textContent = wanted ? 'Pause animations' : 'Play animations';
+    buttons.forEach(b => { b.querySelector('.dos-button-label').textContent = wanted ? 'Pause animations' : 'Play animations'; });
   }
 
   function sync(video) {
@@ -2583,12 +2583,12 @@ feature('Case video', function () {
     } else if (!video.paused) video.pause();
   }
 
-  button.addEventListener('click', () => {
+  buttons.forEach(b => b.addEventListener('click', () => {
     wanted = !wanted;
     try { sessionStorage.setItem(KEY, wanted ? 'playing' : 'paused'); } catch {}
     render();
     videos.forEach(sync);
-  });
+  }));
   reduceMotion.addEventListener('change', () => {
     if (reduceMotion.matches) { wanted = false; render(); videos.forEach(sync); }
   });
@@ -2605,6 +2605,6 @@ feature('Case video', function () {
     videos.forEach(v => io.observe(v));
   }
   render();
-  button.hidden = false;
+  buttons.forEach(b => { b.hidden = false; });
   videos.forEach(sync);
 });
