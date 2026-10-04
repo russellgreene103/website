@@ -7,8 +7,12 @@ The git repo is this `website/` folder, not its parent. Run git commands from he
 ## Branches
 
 - `main` = production, https://russellgreene.com
-- `delight` = preview, https://delight.website-95j.pages.dev
-- Build and test on `delight`, then fast-forward `main` to ship (`git merge --ff-only delight`).
+- `delight` = staging for main, preview https://delight.website-95j.pages.dev. Build and test normal releases here; ship by fast-forwarding main to it (`git merge --ff-only delight`).
+- `cases` = the long-running branch for the on-site case studies (`/work/<slug>/`), preview https://cases.website-95j.pages.dev. Case-study work happens only here until they're all done.
+- **After every ship to main, merge main into cases** (`git checkout cases && git merge main`; a merge commit is fine on cases) and push, so cases always contains main.
+- **When the case studies go live:** fast-forward delight to cases (`git checkout delight && git merge --ff-only cases`), test, then ship as usual.
+- Previews get `X-Robots-Tag: noindex` from Pages. Cloudflare's edge can keep serving a page a branch has since removed at its bare URL (a cached copy); check with a cache-buster (`?cb=…`).
+- Testing a preview (`SITE=https://<branch>.website-95j.pages.dev node regress.mjs`): check that branch out here first, because the suite reads `_headers` and the asset versions from this working tree. The suite works out from the homepage whether the case study is on the branch and skips or runs its checks to match.
 - **Never merge or push to `main` unless explicitly asked.** If a fast-forward isn't possible, stop and ask.
 
 ## Files
