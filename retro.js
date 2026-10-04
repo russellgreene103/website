@@ -2528,56 +2528,83 @@ feature('Work list', function () {
   });
 });
 
-// Case-study hero loop: muted, and it plays only while it's on screen. Nothing is fetched until then
-// (preload="none"). Reduced motion never autoplays: the poster picture shows and the button plays it on request.
-// The button pauses and plays it (and remembers that choice while the page is open). The video lies over the
-// poster picture, transparent until a frame of it has been painted, so the poster never blinks to black.
+// Case-study loops (the hero and every other .case-video): muted, each playing only while at least a quarter of it
+// is on screen. Nothing is fetched until then (preload="none"). Each lies over its poster picture, transparent until
+// a frame of it has been painted, so the picture never blinks to black. The hero's button is the page-wide motion
+// control: it pauses or plays every loop, and the choice holds for the visit (sessionStorage). Reduced motion never
+// autoplays: every picture stays until the visitor presses Play.
+// Films (.case-film-video) are the visitor's to start: never autoplayed, and starting one pauses any other.
 feature('Case video', function () {
-  const video = document.querySelector('.case-video');
+  const films = [...document.querySelectorAll('.case-film-video')];
+  films.forEach(film => {
+    // The poster is whichever file the picture under it chose (720 or 1280), so it costs no extra request
+    const img = film.parentElement.querySelector('.case-poster img');
+    const setPoster = () => { if (img.currentSrc) film.poster = img.currentSrc; };
+    if (img) {
+      if (img.complete && img.naturalWidth) setPoster();
+      else img.addEventListener('load', setPoster, { once: true });
+    }
+  });
+  // One film at a time: starting any film pauses every other (looked up when it starts, so later ones count too)
+  document.addEventListener('play', e => {
+    if (!e.target.matches || !e.target.matches('.case-film-video')) return;
+    document.querySelectorAll('.case-film-video').forEach(other => { if (other !== e.target && !other.paused) other.pause(); });
+  }, true);
+
+  const videos = [...document.querySelectorAll('.case-video')];
   const button = document.querySelector('.case-video-toggle');
-  if (!video || !button) return;
+  if (!videos.length || !button) return;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const label = button.querySelector('.dos-button-label');
-  let wanted = !reduceMotion.matches, inView = false;
+  const KEY = 'case-motion';
+  const stored = (() => { try { return sessionStorage.getItem(KEY); } catch { return null; } })();
+  let wanted = !reduceMotion.matches && stored !== 'paused';
+  const inView = new Map(videos.map(v => [v, false]));
 
-  // Show the video once a frame of it is on screen (its first frame is the poster, so the swap is invisible)
-  const reveal = () => video.classList.add('has-frame');
-  video.addEventListener('playing', () => {
-    if (video.classList.contains('has-frame')) return;
-    if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(reveal);
-    else video.addEventListener('timeupdate', reveal, { once: true });
+  // Show each video once a frame of it is on screen (its first frame is its poster, so the swap is invisible)
+  videos.forEach(video => {
+    const reveal = () => video.classList.add('has-frame');
+    video.addEventListener('playing', () => {
+      if (video.classList.contains('has-frame')) return;
+      if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(reveal);
+      else video.addEventListener('timeupdate', reveal, { once: true });
+    });
   });
 
   function render() {
-    button.setAttribute('aria-label', wanted ? 'Pause animation' : 'Play animation');
-    label.textContent = wanted ? 'Pause' : 'Play';
+    label.textContent = wanted ? 'Pause animations' : 'Play animations';
   }
 
-  function sync() {
-    if (wanted && inView) {
+  function sync(video) {
+    if (wanted && inView.get(video)) {
       const p = video.play();
-      if (p && p.catch) p.catch(() => { wanted = false; render(); }); // autoplay refused: offer the button
+      // Autoplay refused (low-power mode, say): offer Play instead. A pause that interrupts play() is not a refusal.
+      if (p && p.catch) p.catch(e => { if (e && e.name === 'NotAllowedError' && wanted) { wanted = false; render(); videos.forEach(sync); } });
     } else if (!video.paused) video.pause();
   }
 
   button.addEventListener('click', () => {
     wanted = !wanted;
+    try { sessionStorage.setItem(KEY, wanted ? 'playing' : 'paused'); } catch {}
     render();
-    sync();
+    videos.forEach(sync);
   });
   reduceMotion.addEventListener('change', () => {
-    if (reduceMotion.matches) { wanted = false; render(); sync(); }
+    if (reduceMotion.matches) { wanted = false; render(); videos.forEach(sync); }
   });
 
   if (!('IntersectionObserver' in window)) {
-    inView = true;
+    videos.forEach(v => inView.set(v, true));
   } else {
-    new IntersectionObserver(entries => {
-      inView = entries.some(e => e.isIntersecting);
-      sync();
-    }, { threshold: 0.25 }).observe(video);
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        inView.set(e.target, e.isIntersecting && e.intersectionRatio >= 0.25);
+        sync(e.target);
+      });
+    }, { threshold: [0, 0.25] });
+    videos.forEach(v => io.observe(v));
   }
   render();
   button.hidden = false;
-  sync();
+  videos.forEach(sync);
 });

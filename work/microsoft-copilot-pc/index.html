@@ -286,30 +286,90 @@
       color: #444;
     }
 
-    /* Photos: a full-width row (label above it, like the hero) of three DOS-framed stills */
+    /* A section whose media sits under its label at full width (DIR ASSETS) */
     .case-section-wide {
       grid-template-columns: 1fr;
       gap: 20px 0;
     }
 
-    /* Photos: three DOS-framed stills */
+    /* Each section's media: after the text, across the full content width like the hero, with a caption */
+    .case-media {
+      grid-column: 1 / -1;
+      margin-top: 32px;
+      padding: 0 3px 3px 0; /* room for the frames' hard shadow */
+    }
+    .case-section-wide .case-media { margin-top: 0; }
+
+    .case-caption {
+      margin-top: 16px;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      line-height: 1.7;
+      color: #555;
+    }
+
+    /* DOS-framed 4:5 stills, two or three across */
     .case-photos {
       list-style: none;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 20px;
-      padding: 0 3px 3px 0;
     }
+    .case-photos-2 { grid-template-columns: repeat(2, 1fr); }
 
-    .case-photos img {
+    .case-photos img,
+    .case-tile,
+    .case-wide {
       display: block;
       width: 100%;
-      height: auto;
-      aspect-ratio: 4 / 5;
-      object-fit: cover;
       background: var(--rule);
       border: 1px solid var(--ink);
       box-shadow: 3px 3px 0 var(--ink);
+    }
+
+    .case-photos img {
+      height: auto;
+      aspect-ratio: 4 / 5;
+      object-fit: cover;
+    }
+
+    /* DIR ASSETS: square tiles, stills and loops mixed */
+    .case-tiles {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+
+    .case-tile {
+      position: relative;
+      aspect-ratio: 1;
+      overflow: hidden;
+    }
+
+    .case-tile > img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Wide 16:9 frames: the PROTECT loop and the film */
+    .case-wide {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+    }
+
+    .case-film { background: var(--ink); }
+
+    .case-film-video {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
     }
 
     /* Credits, the link out and the way back */
@@ -362,12 +422,15 @@
         grid-template-columns: 1fr;
         gap: 16px 0;
       }
+      .case-media { margin-top: 24px; }
       .case-photos { grid-template-columns: 1fr; gap: 24px; }
+      .case-tiles { grid-template-columns: repeat(2, 1fr); gap: 16px; }
       footer { flex-wrap: wrap; justify-content: space-between; gap: 16px; }
     }
 
     @media (max-width: 660px), (hover: none) and (pointer: coarse) {
       .section-label,
+      .case-caption,
       .case-body .case-credits,
       .case-body .case-full { font-size: 11px; }
     }
@@ -404,7 +467,8 @@
     </div>
 
     <!-- Hero loop: decorative. The picture is the loop's first frame (and the LCP); the video sits on top, invisible
-         until retro.js has a frame of it on screen, and plays only in view (never under reduced motion) -->
+         until retro.js has a frame of it on screen, and plays only in view (never under reduced motion).
+         Its button is the page-wide motion control: it pauses and plays every loop on the page -->
     <div class="case-hero-media">
       <picture class="case-poster">
         <source srcset="/work/microsoft-copilot-pc/hero-poster-720.webp" type="image/webp" media="(max-width: 660px)" width="720" height="406" />
@@ -414,7 +478,7 @@
         <source src="/work/microsoft-copilot-pc/hero-720.mp4" type="video/mp4" media="(max-width: 660px)" />
         <source src="/work/microsoft-copilot-pc/hero.mp4" type="video/mp4" />
       </video>
-      <button type="button" class="dos-button case-video-toggle" aria-label="Pause animation" hidden><span class="dos-button-label">Pause</span></button>
+      <button type="button" class="dos-button case-video-toggle" hidden><span class="dos-button-label">Pause animations</span></button>
     </div>
 
     <section class="case-section" aria-labelledby="brief-label">
@@ -422,6 +486,13 @@
       <div class="case-body">
           <p>Microsoft and Koto had the strategy and the big idea: light as the metaphor for AI. They needed a partner to turn that idea into a CG world, and to scale it into everything a global launch needs.</p>
       </div>
+      <figure class="case-media">
+        <ul class="case-photos case-photos-2">
+          <li><img src="/work/microsoft-copilot-pc/brief-chip-1200.webp" srcset="/work/microsoft-copilot-pc/brief-chip-600.webp 600w, /work/microsoft-copilot-pc/brief-chip-1200.webp 1200w" sizes="(max-width: 660px) calc(100vw - 40px), (max-width: 900px) calc((100vw - 87px) / 2), 407px" width="1200" height="1500" loading="lazy" decoding="async" alt="CG render: an NPU chip drawn as stacked translucent layers, glowing peach from inside." /></li>
+          <li><img src="/work/microsoft-copilot-pc/brief-ports-1200.webp" srcset="/work/microsoft-copilot-pc/brief-ports-600.webp 600w, /work/microsoft-copilot-pc/brief-ports-1200.webp 1200w" sizes="(max-width: 660px) calc(100vw - 40px), (max-width: 900px) calc((100vw - 87px) / 2), 407px" width="1200" height="1500" loading="lazy" decoding="async" alt="CG render: a laptop in side profile, its ports catching warm light against a soft white bloom." /></li>
+        </ul>
+        <figcaption class="case-caption">Light as the metaphor for AI, built as a CG world.</figcaption>
+      </figure>
     </section>
 
     <section class="case-section" aria-labelledby="role-label">
@@ -429,6 +500,14 @@
       <div class="case-body">
           <p>I'd built and held BUCK's relationship with the Microsoft lead behind the launch's go-to-market and creative, so BUCK was in the conversation as soon as the search for a partner began. As executive producer, I worked with Microsoft to define the shape and size of our role, so BUCK delivered the most value where it mattered most. I ran a team of 20-plus at BUCK at peak, brought in Ditroit as our CG partner and managed that partnership, and worked side by side with Koto, the Windows and Surface teams, and our live-action partners.</p>
       </div>
+      <figure class="case-media">
+        <ul class="case-photos">
+          <li><img src="/work/microsoft-copilot-pc/role-skyline-1200.webp" srcset="/work/microsoft-copilot-pc/role-skyline-600.webp 600w, /work/microsoft-copilot-pc/role-skyline-1200.webp 1200w" sizes="(max-width: 660px) calc(100vw - 40px), (max-width: 900px) calc((100vw - 107px) / 3), 265px" width="1200" height="1500" loading="lazy" decoding="async" alt="Portrait from the New York shoot: a man in a mustard sweater against a dusk sky, a tall building in silhouette behind him." /></li>
+          <li><img src="/work/microsoft-copilot-pc/role-window-1200.webp" srcset="/work/microsoft-copilot-pc/role-window-600.webp 600w, /work/microsoft-copilot-pc/role-window-1200.webp 1200w" sizes="(max-width: 660px) calc(100vw - 40px), (max-width: 900px) calc((100vw - 107px) / 3), 265px" width="1200" height="1500" loading="lazy" decoding="async" alt="Portrait from the New York shoot: a woman in a mint knit polo, lit by warm window light falling across a pink wall." /></li>
+          <li><img src="/work/microsoft-copilot-pc/role-table-1200.webp" srcset="/work/microsoft-copilot-pc/role-table-600.webp 600w, /work/microsoft-copilot-pc/role-table-1200.webp 1200w" sizes="(max-width: 660px) calc(100vw - 40px), (max-width: 900px) calc((100vw - 107px) / 3), 265px" width="1200" height="1500" loading="lazy" decoding="async" alt="From the New York shoot: a woman at a round table opening a Surface Laptop in warm window light, a glass of orange juice beside it." /></li>
+        </ul>
+        <figcaption class="case-caption">Portraits from the New York photo and video shoot.</figcaption>
+      </figure>
     </section>
 
     <section class="case-section" aria-labelledby="challenge-label">
@@ -436,6 +515,13 @@
       <div class="case-body">
           <p>We joined a team that was already in motion, and the job was to fit in fast and make the work better without slowing it down. The hardest production problem was retail: assets had to go out the door early, before the rest of the system was fully set, and that took the most complex production planning of the whole project.</p>
       </div>
+      <figure class="case-media">
+        <ul class="case-photos case-photos-2">
+          <li><img src="/work/microsoft-copilot-pc/retail-totem-1152.webp" srcset="/work/microsoft-copilot-pc/retail-totem-600.webp 600w, /work/microsoft-copilot-pc/retail-totem-1152.webp 1152w" sizes="(max-width: 660px) calc(100vw - 40px), (max-width: 900px) calc((100vw - 87px) / 2), 407px" width="1152" height="1440" loading="lazy" decoding="async" alt="Retail: a free-standing Copilot+ PC display at the foot of a wooden staircase." /></li>
+          <li><img src="/work/microsoft-copilot-pc/retail-window-1200.webp" srcset="/work/microsoft-copilot-pc/retail-window-600.webp 600w, /work/microsoft-copilot-pc/retail-window-1200.webp 1200w" sizes="(max-width: 660px) calc(100vw - 40px), (max-width: 900px) calc((100vw - 87px) / 2), 407px" width="1200" height="1500" loading="lazy" decoding="async" alt="Retail display in a shop window: a tall screen introducing the Copilot key, with Surface devices on plinths." /></li>
+        </ul>
+        <figcaption class="case-caption">Retail: a free-standing display and a shop window.</figcaption>
+      </figure>
     </section>
 
     <section class="case-section" aria-labelledby="made-label">
@@ -445,15 +531,34 @@
       </div>
     </section>
 
-    <section class="case-section case-section-wide" aria-labelledby="photos-label">
-      <h2 class="section-label" id="photos-label" data-command="DIR PHOTOS">Photos</h2>
-      <div class="case-body">
-          <ul class="case-photos">
-            <li><img src="/work/microsoft-copilot-pc/portrait-new-york.webp" srcset="/work/microsoft-copilot-pc/portrait-new-york-600.webp 600w, /work/microsoft-copilot-pc/portrait-new-york.webp 1200w" sizes="(max-width: 660px) calc(100vw - 40px), (max-width: 900px) calc((100vw - 107px) / 3), 265px" width="1200" height="1500" loading="lazy" decoding="async" alt="Portrait from the New York shoot: a woman in a mint knit polo, lit by warm window light falling across a pink wall." /></li>
-            <li><img src="/work/microsoft-copilot-pc/render-copilot-key.webp" srcset="/work/microsoft-copilot-pc/render-copilot-key-600.webp 600w, /work/microsoft-copilot-pc/render-copilot-key.webp 1200w" sizes="(max-width: 660px) calc(100vw - 40px), (max-width: 900px) calc((100vw - 107px) / 3), 265px" width="1200" height="1500" loading="lazy" decoding="async" alt="CG render: a laptop keyboard with a beam of warm light crossing the Copilot key." /></li>
-            <li><img src="/work/microsoft-copilot-pc/retail-display.webp" srcset="/work/microsoft-copilot-pc/retail-display-600.webp 600w, /work/microsoft-copilot-pc/retail-display.webp 1200w" sizes="(max-width: 660px) calc(100vw - 40px), (max-width: 900px) calc((100vw - 107px) / 3), 265px" width="1200" height="1500" loading="lazy" decoding="async" alt="Retail display in a shop window: a tall screen introducing the Copilot key, with Surface devices on plinths." /></li>
-          </ul>
-      </div>
+    <section class="case-section case-section-wide" aria-labelledby="assets-label">
+      <h2 class="section-label" id="assets-label" data-command="DIR ASSETS">Assets</h2>
+      <figure class="case-media">
+        <ul class="case-tiles">
+          <li class="case-tile"><img src="/work/microsoft-copilot-pc/asset-copilot-key-800.webp" srcset="/work/microsoft-copilot-pc/asset-copilot-key-400.webp 400w, /work/microsoft-copilot-pc/asset-copilot-key-800.webp 800w" sizes="(max-width: 660px) calc((100vw - 59px) / 2), (max-width: 900px) calc((100vw - 127px) / 4), 195px" width="800" height="800" loading="lazy" decoding="async" alt="CG render: a laptop keyboard with a beam of warm light crossing the Copilot key." /></li>
+          <li class="case-tile case-loop">
+              <picture class="case-poster"><img src="/work/microsoft-copilot-pc/loop-cocreator-480.webp" width="480" height="480" loading="lazy" decoding="async" alt="Animated loop: a pen sketching a landscape on a tablet, with image panels beside the drawing." /></picture>
+              <video class="case-video" muted loop playsinline preload="none" width="480" height="480" aria-hidden="true"><source src="/work/microsoft-copilot-pc/loop-cocreator-480.mp4" type="video/mp4" /></video>
+            </li>
+          <li class="case-tile"><img src="/work/microsoft-copilot-pc/asset-kickstand-800.webp" srcset="/work/microsoft-copilot-pc/asset-kickstand-400.webp 400w, /work/microsoft-copilot-pc/asset-kickstand-800.webp 800w" sizes="(max-width: 660px) calc((100vw - 59px) / 2), (max-width: 900px) calc((100vw - 127px) / 4), 195px" width="800" height="800" loading="lazy" decoding="async" alt="CG render: Surface Pro kickstand angles fanned out on a deep blue stage." /></li>
+          <li class="case-tile"><img src="/work/microsoft-copilot-pc/asset-colours-800.webp" srcset="/work/microsoft-copilot-pc/asset-colours-400.webp 400w, /work/microsoft-copilot-pc/asset-colours-800.webp 800w" sizes="(max-width: 660px) calc((100vw - 59px) / 2), (max-width: 900px) calc((100vw - 127px) / 4), 195px" width="800" height="800" loading="lazy" decoding="async" alt="CG render: two Surface Laptops, one gold and one blue, floating half open." /></li>
+          <li class="case-tile"><img src="/work/microsoft-copilot-pc/asset-lenses-800.webp" srcset="/work/microsoft-copilot-pc/asset-lenses-400.webp 400w, /work/microsoft-copilot-pc/asset-lenses-800.webp 800w" sizes="(max-width: 660px) calc((100vw - 59px) / 2), (max-width: 900px) calc((100vw - 127px) / 4), 195px" width="800" height="800" loading="lazy" decoding="async" alt="CG render: two camera lenses on the edge of a device, against a sky gradient." /></li>
+          <li class="case-tile"><img src="/work/microsoft-copilot-pc/asset-wall-800.webp" srcset="/work/microsoft-copilot-pc/asset-wall-400.webp 400w, /work/microsoft-copilot-pc/asset-wall-800.webp 800w" sizes="(max-width: 660px) calc((100vw - 59px) / 2), (max-width: 900px) calc((100vw - 127px) / 4), 195px" width="800" height="800" loading="lazy" decoding="async" alt="CG render: a wall of half-open laptops in every colour, lit from warm to cool." /></li>
+          <li class="case-tile case-loop">
+              <picture class="case-poster"><img src="/work/microsoft-copilot-pc/loop-particles-480.webp" width="480" height="480" loading="lazy" decoding="async" alt="Animated loop: metal particles swirling over a laptop lid." /></picture>
+              <video class="case-video" muted loop playsinline preload="none" width="480" height="480" aria-hidden="true"><source src="/work/microsoft-copilot-pc/loop-particles-480.mp4" type="video/mp4" /></video>
+            </li>
+          <li class="case-tile"><img src="/work/microsoft-copilot-pc/asset-stack-720.webp" srcset="/work/microsoft-copilot-pc/asset-stack-400.webp 400w, /work/microsoft-copilot-pc/asset-stack-720.webp 720w" sizes="(max-width: 660px) calc((100vw - 59px) / 2), (max-width: 900px) calc((100vw - 127px) / 4), 195px" width="720" height="720" loading="lazy" decoding="async" alt="CG render: devices balanced in a sculptural stack on stones and dry grass." /></li>
+          <li class="case-tile"><img src="/work/microsoft-copilot-pc/asset-hinge-800.webp" srcset="/work/microsoft-copilot-pc/asset-hinge-400.webp 400w, /work/microsoft-copilot-pc/asset-hinge-800.webp 800w" sizes="(max-width: 660px) calc((100vw - 59px) / 2), (max-width: 900px) calc((100vw - 127px) / 4), 195px" width="800" height="800" loading="lazy" decoding="async" alt="CG render: two laptops meeting hinge to hinge, ports along their edges." /></li>
+          <li class="case-tile"><img src="/work/microsoft-copilot-pc/asset-particles-722.webp" srcset="/work/microsoft-copilot-pc/asset-particles-400.webp 400w, /work/microsoft-copilot-pc/asset-particles-722.webp 722w" sizes="(max-width: 660px) calc((100vw - 59px) / 2), (max-width: 900px) calc((100vw - 127px) / 4), 195px" width="722" height="722" loading="lazy" decoding="async" alt="CG render: metal particles scattering across a laptop lid." /></li>
+          <li class="case-tile"><img src="/work/microsoft-copilot-pc/asset-star-800.webp" srcset="/work/microsoft-copilot-pc/asset-star-400.webp 400w, /work/microsoft-copilot-pc/asset-star-800.webp 800w" sizes="(max-width: 660px) calc((100vw - 59px) / 2), (max-width: 900px) calc((100vw - 127px) / 4), 195px" width="800" height="800" loading="lazy" decoding="async" alt="CG render: Surface Pros arranged in a star." /></li>
+          <li class="case-tile case-loop">
+              <picture class="case-poster"><img src="/work/microsoft-copilot-pc/loop-prompts-480.webp" width="480" height="480" loading="lazy" decoding="async" alt="Animated loop: the Copilot key, with prompt suggestions stacking up beside it." /></picture>
+              <video class="case-video" muted loop playsinline preload="none" width="480" height="480" aria-hidden="true"><source src="/work/microsoft-copilot-pc/loop-prompts-480.mp4" type="video/mp4" /></video>
+            </li>
+        </ul>
+        <figcaption class="case-caption">12 of the more than 100 assets: nine CG renders and three loops.</figcaption>
+      </figure>
     </section>
 
     <section class="case-section" aria-labelledby="protect-label">
@@ -461,6 +566,19 @@
       <div class="case-body">
           <p>The CG lighting was the hardest thing to hold onto. It's difficult for other agencies to reproduce, and easy to lose as a launch scales. I fought for it to stay the hero visual, and found ways to deliver it within the budget.</p>
       </div>
+      <figure class="case-media">
+        <div class="case-wide case-loop">
+          <picture class="case-poster">
+            <source srcset="/work/microsoft-copilot-pc/light-sweep-720.webp" type="image/webp" media="(max-width: 660px)" width="720" height="406" />
+            <img src="/work/microsoft-copilot-pc/light-sweep.webp" width="1280" height="720" loading="lazy" decoding="async" alt="Animated loop: warm light sweeping slowly across a laptop keyboard." />
+          </picture>
+          <video class="case-video" muted loop playsinline preload="none" width="1280" height="720" aria-hidden="true">
+            <source src="/work/microsoft-copilot-pc/light-sweep-720.mp4" type="video/mp4" media="(max-width: 660px)" />
+            <source src="/work/microsoft-copilot-pc/light-sweep.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <figcaption class="case-caption">The CG lighting as the hero: warm light across the keyboard.</figcaption>
+      </figure>
     </section>
 
     <section class="case-section" aria-labelledby="outcome-label">
@@ -468,6 +586,18 @@
       <div class="case-body">
           <p>Microsoft was thrilled, and we've since partnered with them on a number of product marketing campaigns. It was a landmark launch for the category and the brand, and two years on, the work is still in use. For me, that's the real test: work that lasts.</p>
       </div>
+      <figure class="case-media">
+        <div class="case-wide case-film">
+          <picture class="case-poster">
+            <source srcset="/work/microsoft-copilot-pc/film-surface-laptop-720.webp" type="image/webp" media="(max-width: 660px)" width="720" height="406" />
+            <img src="/work/microsoft-copilot-pc/film-surface-laptop.webp" width="1280" height="720" loading="lazy" decoding="async" alt="" aria-hidden="true" />
+          </picture>
+          <video class="case-film-video" controls preload="none" playsinline width="1280" height="720" aria-label="Surface Laptop film">
+            <source src="/work/microsoft-copilot-pc/film-surface-laptop.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <figcaption class="case-caption">One of the seven films: Surface Laptop, 15 seconds.<br />Music only, no dialogue.</figcaption>
+      </figure>
     </section>
 
     <div class="case-section case-end">
@@ -492,7 +622,7 @@
 
 </div>
 
-<script src="/retro.js?v=c25e189e"></script>
+<script src="/retro.js?v=5ba42ebc"></script>
 
 </body>
 </html>
