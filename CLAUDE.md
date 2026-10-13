@@ -4,6 +4,12 @@ Russell Greene's personal site. Plain static HTML, CSS and JS: no build step, no
 Hosted on **Cloudflare Pages**, which auto-deploys every push from GitHub (`russellgreene103/website`).
 The git repo is this `website/` folder, not its parent. Run git commands from here.
 
+## Credentials
+
+- **Never read, print, copy or use stored credentials or tokens:** Wrangler's config, gh's token, SSH keys, `.env` files, keychains, browser storage or anything similar. Never call the Cloudflare or GitHub APIs by pulling a token out of a file.
+- Ordinary CLI commands that use their own login as designed are fine for read-only checks (git, `gh api` for check runs).
+- Anything that needs account access beyond that (retrying a Pages build, purging a cache, changing a setting): stop and ask Russell, and he'll do it in the dashboard.
+
 ## Branches
 
 - `main` = production, https://russellgreene.com
