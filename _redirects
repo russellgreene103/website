@@ -1,9 +1,12 @@
 /CLAUDE.md / 301
 
-# Old Squarespace addresses Google still knows. Never add a catch-all rule here: it would stop 404.html working.
+# Old Squarespace addresses Google still knows. Pages matches a trailing slash only when a
+# rule spells it out. Never add a catch-all rule here: it would stop 404.html working.
 /about          /         301
+/about/         /         301
 /home.html      /         301
 /contact        /#contact 301
+/contact/       /#contact 301
 /work2/*        /#work    301
 /portfolio-2    /#work    301
 /portfolio-2/*  /#work    301
